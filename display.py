@@ -1,6 +1,6 @@
 import pygame
 
-class PygameChart:
+class Display:
     def __init__(self, width=800, height=600, title="Pygame Chart"):
         pygame.init()
         self.width = width
@@ -10,6 +10,7 @@ class PygameChart:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(None, 24)
         self.running = True
+        self.fps = 60
 
     def draw_chart(self, price_history, num_cycles=100):
         self.screen.fill((255, 255, 255))  # Clear screen with white background
@@ -49,10 +50,13 @@ class PygameChart:
                 y2 = self.height - 50 - ((price_history[i] - min_price) / price_range * (self.height - 100))
                 pygame.draw.line(self.screen, (0, 0, 255), (x1, y1), (x2, y2), 2)
 
+    def draw(self, price_history):
+        self.draw_chart(price_history)
+
     def update(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit() 
         pygame.display.flip()
-        self.clock.tick(60)  # Limit to 60 frames per second
+        self.clock.tick(self.fps)  # Limit to 60 frames per second
 

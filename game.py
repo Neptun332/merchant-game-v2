@@ -3,10 +3,10 @@ from map import GameMap, City
 from npc import NPC
 from resources import ResourceName, Resource
 from global_market import GlobalMarket
-from pygame_chart import PygameChart
+from display import Display
 class Game:
     def __init__(self):
-        self.chart = PygameChart(title="Resource Prices")
+        self.display = Display(title="Resource Prices")
         self.event_manager = EventManager()
         self.game_map = GameMap()
         self.npcs = []
@@ -36,10 +36,8 @@ class Game:
                     npc.trade(city)
             self.global_market.update_prices()
 
-
-            #TODO: change
-            self.chart.draw_chart(self.global_market.price_history[ResourceName.Iron])
-            self.chart.update()
+            self.display.draw(self.global_market.price_history[ResourceName.Iron])
+            self.display.update()
             
             if iter > 1000:
                 running = False  # Stop after one loop for this example

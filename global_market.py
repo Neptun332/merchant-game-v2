@@ -9,9 +9,9 @@ class GlobalMarket:
         self.cities = cities
         self.npcs = npcs
 
-        self.base_prices = {
-            ResourceName.Iron: 100
-        }
+        self.total_gold = 0  
+        self.base_prices = defaultdict(int)
+
         self.price_history = {
             ResourceName.Iron: [self.base_prices[ResourceName.Iron]]
         }
@@ -20,11 +20,13 @@ class GlobalMarket:
         self.total_consumed = defaultdict(int)
         self.total_produced = defaultdict(int)
         self.total_amount = defaultdict(int)
+    
         
         # Track history of consumption and production
         self.consumption_history = defaultdict(list)
         self.production_history = defaultdict(list)
         self.amount_history = defaultdict(list)
+        self.base_prices_history = defaultdict(list)
         
         # Pre-populate with keys from base_prices
         for resource_name in self.base_prices.keys():
@@ -41,6 +43,8 @@ class GlobalMarket:
         self.calculate_total_resource_consumed()
         self.calculate_total_resource_produced()
         self.calculate_total_resource_amount()
+        self.calculate_base_prices()
+        self.calculate_total_gold()
         
         for resource_name in self.price_history.keys():
             # Update price history
@@ -50,6 +54,8 @@ class GlobalMarket:
             self.consumption_history[resource_name].append(self.total_consumed[resource_name])
             self.production_history[resource_name].append(self.total_produced[resource_name])
             self.amount_history[resource_name].append(self.total_amount[resource_name])
+            self.base_prices_history[resource_name].append(self.base_prices[resource_name])
+
 
     def get_resource_price(self, resource_name: ResourceName) -> float:
         return (self.base_prices[resource_name] * (1 + self.get_resource_price_change(resource_name)))
@@ -58,7 +64,7 @@ class GlobalMarket:
         return self.total_consumed[resource_name]
 
     def get_resource_supply(self, resource_name: ResourceName) -> int:
-        return self.total_produced[resource_name]
+        return self.total_produced[resource_name] + self.total_amount[resource_name]
 
     def get_resource_price_change(self, resource_name: ResourceName) -> float:
         return 0.1 * (self.get_resource_demand(resource_name) / (self.get_resource_supply(resource_name) + 1))
@@ -103,4 +109,26 @@ class GlobalMarket:
         for city in self.cities.values():                
             for resource_name in city.resources:
                 self.total_amount[resource_name] += city.resources[resource_name].amount
+
+    def calculate_total_gold(self):
+        """
+        Calculate the total gold across all entities
+        """
+        self.total_gold = 0
+        # Sum up consumption and production from all cities
+        for city in self.cities.values():                
+            self.total_gold += city.gold
+            
+        for npc in self.npcs:
+            self.total_gold += npc.gold
+
+        return self.total_gold
+
+    def calculate_base_prices(self):
+        self.base_prices = {
+            ResourceName.Iron: self.total_gold / sum(self.total_amount.values())
+        }
+        return self.base_prices
+
+
             

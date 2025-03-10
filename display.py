@@ -3,7 +3,7 @@ import pygame
 from resources import ResourceName
 
 class Display:
-    def __init__(self, width=800, height=600, title="Pygame Chart"):
+    def __init__(self, width=1400, height=1000, title="Pygame Chart"):
         pygame.init()
         self.width = width
         self.height = height
@@ -15,8 +15,8 @@ class Display:
         self.fps = 60
         
         # Grid configuration
-        self.grid_rows = 2
-        self.grid_cols = 2
+        self.grid_rows = 3
+        self.grid_cols = 3
         self.chart_padding = 10
 
     def draw_chart(self, price_history, grid_x=0, grid_y=0, num_cycles=1000, title=None):
@@ -153,6 +153,14 @@ class Display:
                 grid_x=1, 
                 grid_y=1, 
                 title=f"Iron in the market (Current: {global_market.total_amount[ResourceName.Iron]})"
+            )
+
+        if hasattr(global_market, 'base_prices_history') and ResourceName.Iron in global_market.base_prices_history:
+            self.draw_chart(
+                global_market.base_prices_history[ResourceName.Iron], 
+                grid_x=2, 
+                grid_y=0, 
+                title=f"Iron base prices (Current: {global_market.base_prices_history[ResourceName.Iron]})"
             )
 
     def update(self):

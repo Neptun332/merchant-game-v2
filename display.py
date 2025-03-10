@@ -19,7 +19,7 @@ class Display:
         self.grid_cols = 2
         self.chart_padding = 10
 
-    def draw_chart(self, price_history, grid_x=0, grid_y=0, num_cycles=100, title=None):
+    def draw_chart(self, price_history, grid_x=0, grid_y=0, num_cycles=1000, title=None):
         """
         Draw a chart at the specified grid position.
         
@@ -74,16 +74,39 @@ class Display:
                          (chart_area_x + chart_area_width, chart_area_y + chart_area_height), 2)  # X-axis
 
         if len(price_history) > 1:
-            max_price = max(price_history)
-            min_price = min(price_history)
-            price_range = max_price - min_price if max_price != min_price else 1
+            # Always start from 0 for the y-axis
+            min_price = 0
+            max_price = max(max(price_history), 1)  # Ensure max is at least 1 to avoid division by zero
+            price_range = max_price - min_price
 
-            # Draw Y-axis scale (3 values: min, middle, max)
-            for i in range(3):
-                y_value = min_price + (price_range / 2) * i
+            # Draw grid lines
+            grid_color = (200, 200, 200)  # Light gray
+            
+            # Horizontal grid lines
+            for i in range(4):
+                y_value = min_price + (price_range / 3) * i
                 y_pos = chart_area_y + chart_area_height - ((y_value - min_price) / price_range * chart_area_height)
+                # Draw horizontal grid line
+                pygame.draw.line(self.screen, grid_color, 
+                                (chart_area_x, y_pos), 
+                                (chart_area_x + chart_area_width, y_pos), 1)
+                # Draw y-axis label
                 text = self.font.render(f'{int(y_value)}', True, (0, 0, 0))
                 self.screen.blit(text, (chart_area_x - 25, y_pos - 10))
+            
+            # Vertical grid lines (every 10 data points)
+            if len(price_history) > 10:
+                step = max(1, len(price_history) // 5)
+                for i in range(0, len(price_history), step):
+                    x_pos = chart_area_x + i * (chart_area_width / len(price_history))
+                    # Draw vertical grid line
+                    pygame.draw.line(self.screen, grid_color, 
+                                    (x_pos, chart_area_y), 
+                                    (x_pos, chart_area_y + chart_area_height), 1)
+                    # Draw x-axis label for every other grid line to avoid crowding
+                    if i % (step * 2) == 0:
+                        text = self.font.render(f'{i}', True, (0, 0, 0))
+                        self.screen.blit(text, (x_pos - 10, chart_area_y + chart_area_height + 5))
 
             # Draw the price history
             for i in range(1, len(price_history)):
@@ -124,13 +147,12 @@ class Display:
             )
         
         # Draw net change in bottom-right (1,1)
-        if hasattr(global_market, 'net_change_history') and ResourceName.Iron in global_market.net_change_history:
-            net_change = global_market.total_produced.get(ResourceName.Iron, 0) - global_market.total_consumed.get(ResourceName.Iron, 0)
+        if hasattr(global_market, 'amount_history') and ResourceName.Iron in global_market.amount_history:
             self.draw_chart(
-                global_market.net_change_history[ResourceName.Iron], 
+                global_market.amount_history[ResourceName.Iron], 
                 grid_x=1, 
                 grid_y=1, 
-                title=f"Net Change (Current: {net_change})"
+                title=f"Iron in the market (Current: {global_market.total_amount[ResourceName.Iron]})"
             )
 
     def update(self):

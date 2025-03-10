@@ -35,7 +35,6 @@ class Game:
             for city_name, city in self.game_map.cities.items():
                 city.consume_resources()
                 city.produce_resources()
-                print(f"{city_name} - Iron: {city.resources[ResourceName.Iron].amount}")
             
             # Game loop logic
             for npc in self.npcs:

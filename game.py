@@ -4,6 +4,8 @@ from npc import NPC
 from resources import ResourceName, Resource
 from global_market import GlobalMarket
 from display import Display
+
+
 class Game:
     def __init__(self):
         self.display = Display(title="Resource Prices")
@@ -29,6 +31,12 @@ class Game:
         running = True
         iter = 0
         while running:
+            # Process city resource consumption and production
+            for city_name, city in self.game_map.cities.items():
+                city.consume_resources()
+                city.produce_resources()
+                print(f"{city_name} - Iron: {city.resources[ResourceName.Iron].amount}")
+            
             # Game loop logic
             for npc in self.npcs:
                 city = self.game_map.get_city("CityA")

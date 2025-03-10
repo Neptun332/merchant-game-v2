@@ -1,6 +1,4 @@
 from enum import Enum
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 import random  # For simulating real-time data updates
 
 class ResourceName(str, Enum):

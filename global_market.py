@@ -1,9 +1,7 @@
-import pygame
 import random
 from map import City
 from npc import NPC
 from resources import ResourceName
-from pygame_chart import PygameChart
 
 class GlobalMarket:
 

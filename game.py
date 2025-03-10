@@ -44,7 +44,7 @@ class Game:
                     npc.trade(city)
             self.global_market.update_prices()
 
-            self.display.draw(self.global_market.price_history[ResourceName.Iron])
+            self.display.draw(self.global_market)
             self.display.update()
             
             if iter > 1000:

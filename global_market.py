@@ -1,14 +1,18 @@
 import random
+from local_market import LocalMarket
 from map import City
 from npc import NPC
 from resources import ResourceName
 from collections import defaultdict
+
+
 class GlobalMarket:
 
     def __init__(self, cities: list[City], npcs: list[NPC]):
         self.cities = cities
         self.npcs = npcs
 
+        self.price_change_factor = 10
         self.total_gold = 0  
         self.base_prices = defaultdict(int)
 
@@ -36,6 +40,9 @@ class GlobalMarket:
         self.current_price = {
             ResourceName.Iron: self.get_resource_price(ResourceName.Iron)
         }
+
+
+        self.local_markets: list[LocalMarket] = []
         
 
     def update_prices(self):
@@ -56,6 +63,9 @@ class GlobalMarket:
             self.amount_history[resource_name].append(self.total_amount[resource_name])
             self.base_prices_history[resource_name].append(self.base_prices[resource_name])
 
+        for local_market in self.local_markets:
+            local_market.update_prices()
+
 
     def get_resource_price(self, resource_name: ResourceName) -> float:
         return (self.base_prices[resource_name] * (1 + self.get_resource_price_change(resource_name)))
@@ -67,7 +77,7 @@ class GlobalMarket:
         return self.total_produced[resource_name] + self.total_amount[resource_name]
 
     def get_resource_price_change(self, resource_name: ResourceName) -> float:
-        return 0.1 * (self.get_resource_demand(resource_name) / (self.get_resource_supply(resource_name) + 1))
+        return self.price_change_factor * (self.get_resource_demand(resource_name) / (self.get_resource_supply(resource_name) + 1))
     
     def calculate_total_resource_consumed(self):
         """
@@ -78,9 +88,9 @@ class GlobalMarket:
             self.total_consumed[resource_name] = 0
             
         # Sum up consumption and production from all cities
-        for city in self.cities.values():
-            for resource_name in city.consumed_resources:
-                self.total_consumed[resource_name] += city.consumed_resources[resource_name]
+        for local_market in self.local_markets:
+            for resource_name in local_market.consumed_resources:
+                self.total_consumed[resource_name] += local_market.consumed_resources[resource_name]
                 
     
     def calculate_total_resource_produced(self):
@@ -92,9 +102,9 @@ class GlobalMarket:
             self.total_produced[resource_name] = 0
             
         # Sum up consumption and production from all cities
-        for city in self.cities.values():                
-            for resource_name in city.produced_resources:
-                self.total_produced[resource_name] += city.produced_resources[resource_name]
+        for local_market in self.local_markets:
+            for resource_name in local_market.produced_resources:
+                self.total_produced[resource_name] += local_market.produced_resources[resource_name]
 
         
     def calculate_total_resource_amount(self):
@@ -106,9 +116,9 @@ class GlobalMarket:
             self.total_amount[resource_name] = 0
             
         # Sum up consumption and production from all cities
-        for city in self.cities.values():                
-            for resource_name in city.resources:
-                self.total_amount[resource_name] += city.resources[resource_name].amount
+        for local_market in self.local_markets:
+            for resource_name in local_market.resources:
+                self.total_amount[resource_name] += local_market.resources[resource_name].amount
 
     def calculate_total_gold(self):
         """
@@ -116,8 +126,8 @@ class GlobalMarket:
         """
         self.total_gold = 0
         # Sum up consumption and production from all cities
-        for city in self.cities.values():                
-            self.total_gold += city.gold
+        for local_market in self.local_markets:
+            self.total_gold += local_market.gold
             
         for npc in self.npcs:
             self.total_gold += npc.gold

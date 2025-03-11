@@ -125,7 +125,7 @@ class Display:
             global_market.price_history[ResourceName.Iron], 
             grid_x=0, 
             grid_y=0, 
-            title=f"Iron Price (Current: {int(global_market.current_price[ResourceName.Iron])})"
+            title=f"Global Iron Price (Current: {int(global_market.current_price[ResourceName.Iron])})"
         )
         
         # Draw Iron consumption in top-right (1,0)
@@ -160,8 +160,31 @@ class Display:
                 global_market.base_prices_history[ResourceName.Iron], 
                 grid_x=2, 
                 grid_y=0, 
-                title=f"Iron base prices (Current: {global_market.base_prices_history[ResourceName.Iron]})"
+                title=f"Iron base prices (Current: {global_market.base_prices[ResourceName.Iron]})"
             )
+            
+        # Draw local market prices for each city
+        city_index = 0
+        for city in global_market.cities.values():
+            if city_index < 2:  # Only show first two cities to avoid overcrowding
+                self.draw_chart(
+                    city.local_market.price_history[ResourceName.Iron],
+                    grid_x=city_index,
+                    grid_y=2,
+                    title=f"{city.name} Local Iron Price (Current: {int(city.local_market.current_price[ResourceName.Iron])})"
+                )
+                city_index += 1
+
+        city_index = 0
+        for city in global_market.cities.values():
+            if city_index < 2:  # Only show first two cities to avoid overcrowding
+                self.draw_chart(
+                    city.local_market.amount_history[ResourceName.Iron],
+                    grid_x=2,
+                    grid_y=city_index+1,
+                    title=f"{city.name} Amount of Iron (Current: {int(city.local_market.resources[ResourceName.Iron].amount)})"
+                )
+                city_index += 1
 
     def update(self):
         for event in pygame.event.get():

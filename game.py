@@ -1,5 +1,7 @@
+from city import City
 from events import EventManager
-from map import GameMap, City
+from local_market import LocalMarket
+from map import GameMap
 from npc import NPC
 from resources import ResourceName, Resource
 from global_market import GlobalMarket
@@ -17,8 +19,8 @@ class Game:
 
     def setup(self):
         # Setup cities
-        city1 = City("CityA", {ResourceName.Iron: Resource(ResourceName.Iron, 100)})
-        city2 = City("CityB", {ResourceName.Iron: Resource(ResourceName.Iron, 80)})
+        city1 = City("CityA", LocalMarket(self.global_market, {ResourceName.Iron: Resource(ResourceName.Iron, 100)}))
+        city2 = City("CityB", LocalMarket(self.global_market, {ResourceName.Iron: Resource(ResourceName.Iron, 80)}))
         self.game_map.add_city(city1)
         self.game_map.add_city(city2)
 
@@ -31,6 +33,7 @@ class Game:
         running = True
         iter = 0
         while running:
+            self.global_market.update_prices()
             # Process city resource consumption and production
             for city_name, city in self.game_map.cities.items():
                 city.consume_resources()
@@ -41,7 +44,6 @@ class Game:
                 city = self.game_map.get_city("CityA")
                 if city:
                     npc.trade(city)
-            self.global_market.update_prices()
 
             self.display.draw(self.global_market)
             self.display.update()

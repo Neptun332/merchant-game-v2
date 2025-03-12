@@ -7,7 +7,7 @@ class LocalMarket:
         self.global_market.local_markets.append(self)
 
         self.resources = resources
-        self.gold = 500
+        self.gold = 5000
         self.price_change_factor = 10
 
         self.produced_resources = defaultdict(int)

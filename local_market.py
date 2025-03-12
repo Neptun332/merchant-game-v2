@@ -8,7 +8,7 @@ class LocalMarket:
 
         self.resources = resources
         self.gold = 500
-        self.price_change_factor = 5
+        self.price_change_factor = 10
 
         self.produced_resources = defaultdict(int)
         self.consumed_resources = defaultdict(int)

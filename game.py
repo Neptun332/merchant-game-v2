@@ -21,8 +21,10 @@ class Game:
         # Setup cities
         city1 = City("CityA", LocalMarket(self.global_market, {ResourceName.Iron: Resource(ResourceName.Iron, 100)}))
         city2 = City("CityB", LocalMarket(self.global_market, {ResourceName.Iron: Resource(ResourceName.Iron, 80)}))
+        city3 = City("CityC", LocalMarket(self.global_market, {ResourceName.Iron: Resource(ResourceName.Iron, 150)}))
         self.game_map.add_city(city1)
         self.game_map.add_city(city2)
+        self.game_map.add_city(city3)
 
         # Setup NPCs
         npc1 = NPC("Trader Joe", {ResourceName.Iron: Resource(ResourceName.Iron, 10)})

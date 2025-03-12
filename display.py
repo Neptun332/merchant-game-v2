@@ -127,31 +127,12 @@ class Display:
             grid_y=0, 
             title=f"Global Iron Price (Current: {int(global_market.current_price[ResourceName.Iron])})"
         )
-        
-        # Draw Iron consumption in top-right (1,0)
-        if hasattr(global_market, 'consumption_history') and ResourceName.Iron in global_market.consumption_history:
-            self.draw_chart(
-                global_market.consumption_history[ResourceName.Iron], 
-                grid_x=1, 
-                grid_y=0, 
-                title=f"Iron Consumption (Current: {global_market.total_consumed[ResourceName.Iron]})"
-            )
-        
-        # Draw Iron production in bottom-left (0,1)
-        if hasattr(global_market, 'production_history') and ResourceName.Iron in global_market.production_history:
-            self.draw_chart(
-                global_market.production_history[ResourceName.Iron], 
-                grid_x=0, 
-                grid_y=1, 
-                title=f"Iron Production (Current: {global_market.total_produced[ResourceName.Iron]})"
-            )
-        
         # Draw net change in bottom-right (1,1)
         if hasattr(global_market, 'amount_history') and ResourceName.Iron in global_market.amount_history:
             self.draw_chart(
                 global_market.amount_history[ResourceName.Iron], 
                 grid_x=1, 
-                grid_y=1, 
+                grid_y=0, 
                 title=f"Iron in the market (Current: {global_market.total_amount[ResourceName.Iron]})"
             )
 
@@ -166,22 +147,22 @@ class Display:
         # Draw local market prices for each city
         city_index = 0
         for city in global_market.cities.values():
-            if city_index < 2:  # Only show first two cities to avoid overcrowding
+            if city_index < 3:  # Only show first two cities to avoid overcrowding
                 self.draw_chart(
                     city.local_market.price_history[ResourceName.Iron],
                     grid_x=city_index,
-                    grid_y=2,
+                    grid_y=1,
                     title=f"{city.name} Local Iron Price (Current: {int(city.local_market.current_price[ResourceName.Iron])})"
                 )
                 city_index += 1
 
         city_index = 0
         for city in global_market.cities.values():
-            if city_index < 2:  # Only show first two cities to avoid overcrowding
+            if city_index < 3:  # Only show first two cities to avoid overcrowding
                 self.draw_chart(
                     city.local_market.amount_history[ResourceName.Iron],
-                    grid_x=2,
-                    grid_y=city_index+1,
+                    grid_x=city_index,
+                    grid_y=2,
                     title=f"{city.name} Amount of Iron (Current: {int(city.local_market.resources[ResourceName.Iron].amount)})"
                 )
                 city_index += 1

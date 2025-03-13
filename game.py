@@ -3,6 +3,7 @@ from events import EventManager
 from local_market import LocalMarket
 from map import GameMap
 from npc import NPC
+from production_buildings import Farm, IronMine, ToolsSmithy
 from resources import ResourceName, Resource
 from global_market import GlobalMarket
 from display import Display
@@ -21,6 +22,7 @@ class Game:
         # Setup cities
         city1 = City(
             name="CityA",
+            production_buildings=[Farm(), IronMine()],
             local_market=LocalMarket(
                 global_market=self.global_market, 
                 resources={
@@ -29,11 +31,12 @@ class Game:
                     ResourceName.Wheat: Resource(ResourceName.Wheat, 100),
                     ResourceName.Stone: Resource(ResourceName.Stone, 100),
                     ResourceName.Tools: Resource(ResourceName.Tools, 100)
-                }
+                },
             )
         )
         city2 = City(
             name="CityB",
+            production_buildings=[IronMine()],
             local_market=LocalMarket(
                 global_market=self.global_market, 
                 resources={
@@ -47,6 +50,7 @@ class Game:
         )
         city3 = City(
             name="CityC",
+            production_buildings=[IronMine(), ToolsSmithy()],
             local_market=LocalMarket(
                 global_market=self.global_market, 
                 resources={

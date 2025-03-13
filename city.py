@@ -1,15 +1,17 @@
 import random
 from local_market import LocalMarket
+from production_buildings import ProductionBuilding
 from resources import Resource, ResourceName
 
 
 class City:
-    def __init__(self, name: str, local_market: LocalMarket):
+    def __init__(self, name: str, local_market: LocalMarket, production_buildings: list[ProductionBuilding]):
         self.name = name
         self.development_level = 1.0  # Base development level, can be increased over time
 
         
         self.local_market = local_market
+        self.production_buildings = production_buildings
 
     def consume_resources(self):
         """Consume random amounts of resources each game tick."""
@@ -20,12 +22,8 @@ class City:
 
 
     def produce_resources(self):
-        """Produce resources based on city development level each game tick."""
-        for resource_name in ResourceName:
-            # Base production is 1-3 units, multiplied by development level
-            base_production = random.randint(1, 2)
-            production_amount = int(base_production * self.development_level)
-            self.local_market.add_produced_resource(resource_name, production_amount)
+        for production_building in self.production_buildings:
+            production_building.produce(self)
 
         
     def get_local_price(self, resource_name: ResourceName) -> float:

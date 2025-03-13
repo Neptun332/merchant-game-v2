@@ -12,7 +12,8 @@ class GlobalMarket:
         self.cities = cities
         self.npcs = npcs
 
-        self.price_change_factor = 10
+        self.price_change_factor = 5
+        self.number_of_ticks_for_average = 20
         self.total_gold = 0  
         self.base_prices = defaultdict(int)
 
@@ -24,8 +25,7 @@ class GlobalMarket:
         self.total_consumed = defaultdict(int)
         self.total_produced = defaultdict(int)
         self.total_amount = defaultdict(int)
-    
-        
+
         # Track history of consumption and production
         self.consumption_history = defaultdict(list)
         self.production_history = defaultdict(list)
@@ -40,7 +40,6 @@ class GlobalMarket:
         self.current_price = {
             ResourceName.Iron: self.get_resource_price(ResourceName.Iron)
         }
-
 
         self.local_markets: list[LocalMarket] = []
         
@@ -71,10 +70,10 @@ class GlobalMarket:
         return (self.base_prices[resource_name] * (1 + self.get_resource_price_change(resource_name)))
 
     def get_resource_demand(self, resource_name: ResourceName) -> int:
-        return self.total_consumed[resource_name]
+        return self.get_recent_average_consumption(resource_name)
 
     def get_resource_supply(self, resource_name: ResourceName) -> int:
-        return self.total_produced[resource_name] + self.total_amount[resource_name]
+        return self.get_recent_average_production(resource_name) + self.total_amount[resource_name]
 
     def get_resource_price_change(self, resource_name: ResourceName) -> float:
         return self.price_change_factor * (self.get_resource_demand(resource_name) / (self.get_resource_supply(resource_name) + 1))
@@ -140,5 +139,11 @@ class GlobalMarket:
         }
         return self.base_prices
 
+
+    def get_recent_average_production(self, resource_name: ResourceName):
+        return sum(self.production_history[resource_name][-self.number_of_ticks_for_average:]) / self.number_of_ticks_for_average
+    
+    def get_recent_average_consumption(self, resource_name: ResourceName):
+        return sum(self.consumption_history[resource_name][-self.number_of_ticks_for_average:]) / self.number_of_ticks_for_average
 
             

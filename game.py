@@ -95,7 +95,7 @@ class Game:
             self.display.draw(self.global_market)
             self.display.update()
             
-            if iter > 1000:
+            if iter > 2000:
                 running = False  # Stop after one loop for this example
             iter += 1
             

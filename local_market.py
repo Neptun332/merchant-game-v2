@@ -8,7 +8,9 @@ class LocalMarket:
 
         self.resources = resources
         self.gold = 5000
-        self.price_change_factor = 10
+        self.price_change_factor = 5
+        self.number_of_ticks_for_average = 20
+
 
         self.produced_resources = defaultdict(int)
         self.consumed_resources = defaultdict(int)
@@ -37,21 +39,19 @@ class LocalMarket:
             self.price_history[resource_name].append(self.current_price[resource_name])
             
             # Update history
-            self.consumption_history[resource_name].append(self.consumption_history[resource_name])
-            self.production_history[resource_name].append(self.production_history[resource_name])
+            self.consumption_history[resource_name].append(self.consumed_resources[resource_name])
+            self.production_history[resource_name].append(self.produced_resources[resource_name])
             self.amount_history[resource_name].append(self.resources[resource_name].amount)
 
-    def get_resource_price(self, resource_name: ResourceName) -> float:
+    def get_resource_price(self, resource_name: ResourceName) -> int:
         """Calculate the current price for a resource"""
-        return self.base_prices[resource_name] * (1 + self.get_resource_price_change(resource_name))
+        return int(self.base_prices[resource_name] * (1 + self.get_resource_price_change(resource_name)))
     
     def get_resource_demand(self, resource_name: ResourceName) -> int:
-        """Get the current demand for a resource"""
-        return self.consumed_resources[resource_name]
-    
+        return self.get_recent_average_consumption(resource_name)
+
     def get_resource_supply(self, resource_name: ResourceName) -> int:
-        """Get the current supply for a resource"""
-        return self.produced_resources[resource_name] + self.resources[resource_name].amount
+        return self.get_recent_average_production(resource_name) + self.resources[resource_name].amount
     
     def get_resource_price_change(self, resource_name: ResourceName) -> float:
         return self.price_change_factor * (self.get_resource_demand(resource_name) / (self.get_resource_supply(resource_name) + 1))
@@ -66,3 +66,8 @@ class LocalMarket:
         self.resources[resource_name].amount -= actual_consumption
         self.consumed_resources[resource_name] = actual_consumption
     
+    def get_recent_average_production(self, resource_name: ResourceName):
+        return sum(self.production_history[resource_name][-self.number_of_ticks_for_average:]) / self.number_of_ticks_for_average
+    
+    def get_recent_average_consumption(self, resource_name: ResourceName):
+        return sum(self.consumption_history[resource_name][-self.number_of_ticks_for_average:]) / self.number_of_ticks_for_average

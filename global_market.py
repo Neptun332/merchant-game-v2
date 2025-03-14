@@ -58,7 +58,7 @@ class GlobalMarket:
         self.calculate_total_resource_produced()
         self.calculate_total_resource_amount()
         self.calculate_total_gold()
-        self.calculate_market_share()
+        self.market_share = self.get_market_share()
         self.calculate_base_prices()
         
         for resource_name in self.price_history.keys():
@@ -144,7 +144,6 @@ class GlobalMarket:
     def calculate_base_prices(self):
         for resource_name, market_share in self.market_share.items():
             self.base_prices[resource_name] = market_share / max(1, self.total_amount[resource_name])
-            print(f"Base price for {resource_name}: {self.base_prices[resource_name]}")
         return self.base_prices
 
 
@@ -159,13 +158,23 @@ class GlobalMarket:
 
         return self.total_gold / (sum(number_of_units_per_resource) + 1)
     
-    def get_number_of_units_per_resource(self):
-        return {resource_name: self.price_value_modifiers[resource_name] * ammount for resource_name, ammount in self.total_amount.items()}
+    def get_number_of_units_per_resource(self, aditional_resource_ammount: dict[ResourceName, int] = defaultdict(int)):
+        return {resource_name: self.price_value_modifiers[resource_name] * (ammount + aditional_resource_ammount[resource_name]) for resource_name, ammount in self.total_amount.items()}
     
-    def calculate_market_share(self):
-        number_of_units_per_resource = self.get_number_of_units_per_resource()
+    
+    def get_market_share(self, aditional_resource_ammount: dict[ResourceName, int] = defaultdict(int)):
+        number_of_units_per_resource = self.get_number_of_units_per_resource(aditional_resource_ammount)
         price_of_single_unit = self.total_gold / (max(1, sum(number_of_units_per_resource.values())))
+        market_share = {}
         for resource_name in self.total_amount.keys():
-            self.market_share[resource_name] = number_of_units_per_resource[resource_name] * price_of_single_unit
+            market_share[resource_name] = number_of_units_per_resource[resource_name] * price_of_single_unit
+        return market_share
+
+    def estimate_base_resource_price(self, resource_name: ResourceName):
+        aditional_resource_ammount = defaultdict(int)
+        aditional_resource_ammount[resource_name] = 1
+        market_share = self.get_market_share(aditional_resource_ammount)
+        return market_share[resource_name] / max(1, self.total_amount[resource_name])
+
 
             

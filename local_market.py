@@ -17,7 +17,7 @@ class LocalMarket:
         
         # Price data
         self.base_prices = defaultdict(int)
-        self.current_price = defaultdict(float)
+        self.current_price = defaultdict(int)
         self.price_history = defaultdict(list)
         
         # History tracking

@@ -12,9 +12,16 @@ class ProductionBuilding(ABC):
             return True
         return all([city.local_market.resources[resource_name].amount >= required_amount 
                      for resource_name, required_amount in self.required_resources_for_one_production_cycle.items()])
+    
+    def is_production_worth_it(self, city: 'City') -> bool:
+        """Check if the production is worth it based on current resource prices."""
+        cost_of_all_required_resources = sum([city.local_market.current_price[resource_name] * required_amount  for resource_name, required_amount in self.required_resources_for_one_production_cycle.items()])
+        cost_of_all_produced_resources = city.local_market.global_market.estimate_base_resource_price(self.produced_resource) * int(2 * self.level) #TODO: Change this
+        return cost_of_all_produced_resources > cost_of_all_required_resources
+        
 
     def produce(self, city: 'City'):
-        if self.can_produce(city):
+        if self.can_produce(city) and self.is_production_worth_it(city):
             base_production = random.randint(1, 2)
             production_amount = int(base_production * self.level)
             city.local_market.add_produced_resource(self.produced_resource, production_amount)

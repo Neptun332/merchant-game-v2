@@ -1,7 +1,7 @@
 import random
 from local_market import LocalMarket
 from production_buildings import ProductionBuilding
-from resources import Resource, ResourceName
+from resources import ResourceName
 
 
 class City:

@@ -15,7 +15,7 @@ class GlobalMarket:
         self.price_change_factor = 5
         self.number_of_ticks_for_average = 20
         self.total_gold = 0  
-        self.base_prices = defaultdict(int)
+        self.base_prices = defaultdict(float)
 
         self.price_history = {
             ResourceName.Iron: [self.base_prices[ResourceName.Iron]]
@@ -42,6 +42,14 @@ class GlobalMarket:
         }
 
         self.local_markets: list[LocalMarket] = []
+        self.price_value_modifiers = {
+            ResourceName.Iron: 1.5,
+            ResourceName.Wood: 1,
+            ResourceName.Wheat: 0.5,
+            ResourceName.Stone: 1,
+            ResourceName.Tools: 2
+        }
+        self.market_share = defaultdict(float)
         
 
     def update_prices(self):
@@ -49,8 +57,9 @@ class GlobalMarket:
         self.calculate_total_resource_consumed()
         self.calculate_total_resource_produced()
         self.calculate_total_resource_amount()
-        self.calculate_base_prices()
         self.calculate_total_gold()
+        self.calculate_market_share()
+        self.calculate_base_prices()
         
         for resource_name in self.price_history.keys():
             # Update price history
@@ -64,7 +73,6 @@ class GlobalMarket:
 
         for local_market in self.local_markets:
             local_market.update_prices()
-
 
     def get_resource_price(self, resource_name: ResourceName) -> float:
         return (self.base_prices[resource_name] * (1 + self.get_resource_price_change(resource_name)))
@@ -134,9 +142,9 @@ class GlobalMarket:
         return self.total_gold
 
     def calculate_base_prices(self):
-        self.base_prices = {
-            ResourceName.Iron: self.total_gold / sum(self.total_amount.values())
-        }
+        for resource_name, market_share in self.market_share.items():
+            self.base_prices[resource_name] = market_share / max(1, self.total_amount[resource_name])
+            print(f"Base price for {resource_name}: {self.base_prices[resource_name]}")
         return self.base_prices
 
 
@@ -145,5 +153,19 @@ class GlobalMarket:
     
     def get_recent_average_consumption(self, resource_name: ResourceName):
         return sum(self.consumption_history[resource_name][-self.number_of_ticks_for_average:]) / self.number_of_ticks_for_average
+    
+    def get_proportional_value_for_single_unit(self):
+        number_of_units_per_resource = [self.price_value_modifiers[resource_name] * ammount for resource_name, ammount in self.total_amount.items()]
+
+        return self.total_gold / (sum(number_of_units_per_resource) + 1)
+    
+    def get_number_of_units_per_resource(self):
+        return {resource_name: self.price_value_modifiers[resource_name] * ammount for resource_name, ammount in self.total_amount.items()}
+    
+    def calculate_market_share(self):
+        number_of_units_per_resource = self.get_number_of_units_per_resource()
+        price_of_single_unit = self.total_gold / (max(1, sum(number_of_units_per_resource.values())))
+        for resource_name in self.total_amount.keys():
+            self.market_share[resource_name] = number_of_units_per_resource[resource_name] * price_of_single_unit
 
             

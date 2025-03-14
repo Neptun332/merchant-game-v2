@@ -143,18 +143,34 @@ class Display:
                 grid_y=0, 
                 title=f"Iron base prices (Current: {global_market.base_prices[ResourceName.Iron]})"
             )
-            
-        # Draw local market prices for each city
-        city_index = 0
-        for city in global_market.cities.values():
-            if city_index < 3:  # Only show first two cities to avoid overcrowding
-                self.draw_chart(
-                    city.local_market.price_history[ResourceName.Iron],
-                    grid_x=city_index,
-                    grid_y=1,
-                    title=f"{city.name} Local Iron Price (Current: {int(city.local_market.current_price[ResourceName.Iron])})"
-                )
-                city_index += 1
+
+        if hasattr(global_market, 'market_share'):
+            self.draw_chart(
+                list(global_market.market_share.values()), 
+                grid_x=0, 
+                grid_y=1, 
+                title=f"Market share (Current: {global_market.market_share.values()})"
+            )
+
+        if hasattr(global_market, 'total_amount'):
+            self.draw_chart(
+                list(global_market.total_amount.values()), 
+                grid_x=1, 
+                grid_y=1, 
+                title=f"Number of resources (Current: {global_market.total_amount.values()})"
+            )
+
+        # # Draw local market prices for each city
+        # city_index = 0
+        # for city in global_market.cities.values():
+        #     if city_index < 3:  # Only show first two cities to avoid overcrowding
+        #         self.draw_chart(
+        #             city.local_market.price_history[ResourceName.Iron],
+        #             grid_x=city_index,
+        #             grid_y=1,
+        #             title=f"{city.name} Local Iron Price (Current: {int(city.local_market.current_price[ResourceName.Iron])})"
+        #         )
+        #         city_index += 1
 
         city_index = 0
         for city in global_market.cities.values():

@@ -15,9 +15,12 @@ class City:
 
     def consume_resources(self):
         """Consume random amounts of resources each game tick."""
-        for resource_name in ResourceName:
+        for resource_name in [ResourceName.Wood, ResourceName.Stone, ResourceName.Tools]:
             # Random consumption between 1 and 5 units
-            consumption_amount = random.randint(0, 3)
+            if ResourceName.Tools == resource_name:
+                consumption_amount = random.randint(2, 5)
+            else:
+                consumption_amount = random.randint(0, 3)
             self.local_market.remove_consumed_resource(resource_name, consumption_amount)
 
 

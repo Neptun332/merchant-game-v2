@@ -22,7 +22,7 @@ class Game:
         # Setup cities
         city1 = City(
             name="CityA",
-            production_buildings=[IronMine()],
+            production_buildings=[IronMine(), Farm(), ToolsSmithy()],
             local_market=LocalMarket(
                 global_market=self.global_market, 
                 resources={
@@ -36,7 +36,7 @@ class Game:
         )
         city2 = City(
             name="CityB",
-            production_buildings=[IronMine()],
+            production_buildings=[IronMine(), Farm(), ToolsSmithy()],
             local_market=LocalMarket(
                 global_market=self.global_market, 
                 resources={
@@ -50,7 +50,7 @@ class Game:
         )
         city3 = City(
             name="CityC",
-            production_buildings=[IronMine()],
+            production_buildings=[IronMine(), Farm(), ToolsSmithy()],
             local_market=LocalMarket(
                 global_market=self.global_market, 
                 resources={

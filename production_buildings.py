@@ -22,9 +22,10 @@ class ProductionBuilding(ABC):
 
     def produce(self, city: 'City'):
         if self.can_produce(city) and self.is_production_worth_it(city):
-            base_production = random.randint(1, 2)
-            production_amount = int(base_production * self.level)
+            production_amount = int(self.base_production * self.level)
             city.local_market.add_produced_resource(self.produced_resource, production_amount)
+            for resource_name, required_amount in self.required_resources_for_one_production_cycle.items():
+                city.local_market.remove_consumed_resource(resource_name, required_amount)
 
     @property
     @abstractmethod
@@ -40,6 +41,10 @@ class ProductionBuilding(ABC):
     @abstractmethod
     def required_resources_for_one_production_cycle(self):
         pass
+
+    @property
+    def base_production(self):
+        return random.randint(1, 2)
     
     
 
@@ -62,12 +67,16 @@ class Farm(ProductionBuilding):
     def required_resources_for_one_production_cycle(self):
         return self._required_resources_for_one_production_cycle
     
+    @property
+    def base_production(self):
+        return random.randint(3, 7)
+    
 class IronMine(ProductionBuilding):
 
     def __init__(self) -> None:
         self._produced_resource = ResourceName.Iron
         self._level = 1
-        self._required_resources_for_one_production_cycle = {}
+        self._required_resources_for_one_production_cycle = {ResourceName.Wheat: 1}
 
     @property
     def produced_resource(self):
@@ -86,7 +95,7 @@ class WoodCutterCottage(ProductionBuilding):
     def __init__(self) -> None:
         self._produced_resource = ResourceName.Wood
         self._level = 1
-        self._required_resources_for_one_production_cycle = {}
+        self._required_resources_for_one_production_cycle = {ResourceName.Wheat: 1}
 
     @property
     def produced_resource(self):
@@ -105,7 +114,7 @@ class StoneMine(ProductionBuilding):
     def __init__(self) -> None:
         self._produced_resource = ResourceName.Stone
         self._level = 1
-        self._required_resources_for_one_production_cycle = {}
+        self._required_resources_for_one_production_cycle = {ResourceName.Wheat: 1}
 
     @property
     def produced_resource(self):
@@ -125,7 +134,8 @@ class ToolsSmithy(ProductionBuilding):
         self._produced_resource = ResourceName.Tools
         self._level = 1
         self._required_resources_for_one_production_cycle = {
-            ResourceName.Iron: 4
+            ResourceName.Iron: 2,
+            ResourceName.Wheat: 1
         }
 
     @property

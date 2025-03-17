@@ -1,5 +1,6 @@
 import pygame
 
+from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName
 
 class Display:
@@ -183,10 +184,60 @@ class Display:
                 )
                 city_index += 1
 
+        self.draw_terrain_map(generate_fractal_noise_2d((512, 512), (4, 4), 6))
+
     def update(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit() 
         pygame.display.flip()
         self.clock.tick(self.fps)  # Limit to 60 frames per second
+
+    def draw_terrain_map(self, noise_map, x=0, y=0):
+        """
+        Draw terrain map based on perlin noise values.
+        
+        Args:
+            noise_map: 2D numpy array of noise values between -1 and 1
+            x: Starting x position for drawing
+            y: Starting y position for drawing
+        """
+        if noise_map is None:
+            return
+
+        # Define terrain colors
+        DEEP_WATER = (0, 0, 139)      # Deep blue
+        SHALLOW_WATER = (0, 191, 255)  # Light blue
+        SAND = (238, 214, 175)         # Sandy yellow
+        PLAINS = (144, 238, 144)       # Light green
+        HIGHLAND = (34, 139, 34)       # Green
+        MOUNTAIN = (128, 128, 128)     # Grey
+
+        cell_size = 1  # Size of each terrain cell in pixels
+        
+        height, width = noise_map.shape
+        
+        for i in range(height):
+            for j in range(width):
+                value = noise_map[i][j]
+                color = DEEP_WATER  # Default color
+                
+                if value < -0.5:
+                    color = DEEP_WATER
+                elif value < 0:
+                    color = SHALLOW_WATER
+                elif value < 0.3:
+                    color = SAND
+                elif value < 0.5:
+                    color = PLAINS
+                elif value < 0.7:
+                    color = HIGHLAND
+                elif value < 0.7:
+                    color = MOUNTAIN
+                
+                pygame.draw.rect(
+                    self.screen,
+                    color,
+                    (x + j * cell_size, y + i * cell_size, cell_size, cell_size)
+                )
 

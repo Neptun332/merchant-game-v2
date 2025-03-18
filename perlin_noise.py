@@ -1,4 +1,6 @@
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+
 
 # https://github.com/pvigier/perlin-numpy
 
@@ -93,7 +95,11 @@ def generate_fractal_noise_2d(
         )
         frequency *= lacunarity
         amplitude *= persistence
-    return noise
+
+    # Scale the result to -1 to 1
+    scaler = MinMaxScaler(feature_range=(-1, 1))
+    scaled_noise = scaler.fit_transform(noise)
+    return scaled_noise
 
 
 # Example usage:

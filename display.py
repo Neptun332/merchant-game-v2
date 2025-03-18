@@ -117,7 +117,7 @@ class Display:
                 y2 = chart_area_y + chart_area_height - ((price_history[i] - min_price) / price_range * chart_area_height)
                 pygame.draw.line(self.screen, (0, 0, 255), (x1, y1), (x2, y2), 2)
 
-    def draw(self, global_market):
+    def draw(self, global_market, map):
         """Draw multiple charts in a grid layout."""
         self.screen.fill((255, 255, 255))  # Clear screen with white background
         
@@ -184,7 +184,7 @@ class Display:
                 )
                 city_index += 1
 
-        self.draw_terrain_map(generate_fractal_noise_2d((512, 512), (4, 4), 6))
+        self.draw_terrain_map(map.terrain_map)
 
     def update(self):
         for event in pygame.event.get():
@@ -193,7 +193,7 @@ class Display:
         pygame.display.flip()
         self.clock.tick(self.fps)  # Limit to 60 frames per second
 
-    def draw_terrain_map(self, noise_map, x=0, y=0):
+    def draw_terrain_map(self, noise_map, x=0, y=0, cell_size=2):
         """
         Draw terrain map based on perlin noise values.
         
@@ -204,35 +204,35 @@ class Display:
         """
         if noise_map is None:
             return
-
+        
         # Define terrain colors
         DEEP_WATER = (0, 0, 139)      # Deep blue
         SHALLOW_WATER = (0, 191, 255)  # Light blue
         SAND = (238, 214, 175)         # Sandy yellow
-        PLAINS = (144, 238, 144)       # Light green
+        PLAINS = (50, 238, 50)       # Light green
         HIGHLAND = (34, 139, 34)       # Green
         MOUNTAIN = (128, 128, 128)     # Grey
 
-        cell_size = 1  # Size of each terrain cell in pixels
+        DEFAULT = (255, 255, 255)     # WHITE
         
         height, width = noise_map.shape
         
         for i in range(height):
             for j in range(width):
                 value = noise_map[i][j]
-                color = DEEP_WATER  # Default color
+                color = DEFAULT
                 
-                if value < -0.5:
+                if -1.1 <= value < -0.5:
                     color = DEEP_WATER
-                elif value < 0:
+                elif -0.5 <= value < 0:
                     color = SHALLOW_WATER
-                elif value < 0.3:
+                elif 0 <= value < 0.1:
                     color = SAND
-                elif value < 0.5:
+                elif 0.1 <= value < 0.5:
                     color = PLAINS
-                elif value < 0.7:
+                elif 0.5 <= value < 0.7:
                     color = HIGHLAND
-                elif value < 0.7:
+                elif 0.7 <= value <= 1.1:
                     color = MOUNTAIN
                 
                 pygame.draw.rect(

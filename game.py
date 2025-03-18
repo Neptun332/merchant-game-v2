@@ -96,7 +96,7 @@ class Game:
                 if city:
                     npc.trade(city)
 
-            self.display.draw(self.global_market)
+            self.display.draw(self.global_market, self.game_map)
             self.display.update()
             
             if iter > 2000:

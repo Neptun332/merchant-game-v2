@@ -96,6 +96,8 @@ class Game:
                 if city:
                     npc.trade(city)
 
+            if not self.display.handle_input(self.game_map):
+                break
             self.display.draw(self.global_market, self.game_map)
             self.display.update()
             

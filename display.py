@@ -1,6 +1,9 @@
 import pygame
+import numpy as np
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName
+import pygame.gfxdraw
+USE_GFXDRAW = True
 
 class Display:
     def __init__(self, width=1024, height=1024, title="Pygame Chart"):
@@ -25,6 +28,19 @@ class Display:
         self.map_offset_y = 0
         self.dragging = False
         self.last_mouse_pos = None
+
+        self.last_cell_size = None
+        self.needs_redraw = True
+        self.color_map = {
+            'DEEP_WATER': (0, 0, 139),
+            'SHALLOW_WATER': (0, 191, 255),
+            'SAND': (238, 214, 175),
+            'PLAINS': (50, 238, 50),
+            'HIGHLAND': (34, 139, 34),
+            'MOUNTAIN': (128, 128, 128),
+            'DEFAULT': (255, 255, 255)
+        }
+
 
     def draw_chart(self, price_history, grid_x=0, grid_y=0, num_cycles=1000, title=None):
         chart_width = (self.width - (self.chart_padding * (self.grid_cols + 1))) // self.grid_cols
@@ -85,10 +101,11 @@ class Display:
                 pygame.draw.line(self.screen, (0, 0, 255), (x1, y1), (x2, y2), 2)
 
     def draw(self, global_market, map):
-        self.screen.fill((255, 255, 255))
         self.draw_terrain_map(map.terrain_map)
+        print(self.clock.get_fps())
 
     def handle_input(self, map):
+        redraw_needed = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -97,31 +114,27 @@ class Display:
                 if event.button == 1:
                     self.dragging = True
                     self.last_mouse_pos = event.pos
-                elif event.button == 4:
+                elif event.button in (4, 5):
                     old_cell_size = self.cell_size
-                    self.cell_size = min(self.cell_size + 1, self.max_cell_size)
+                    if event.button == 4:
+                        self.cell_size = min(self.cell_size + 1, self.max_cell_size)
+                    elif event.button == 5:
+                        self.cell_size = max(self.cell_size - 1, self.min_cell_size)
                     if old_cell_size != self.cell_size:
                         mouse_x, mouse_y = pygame.mouse.get_pos()
                         self.map_offset_x = self.adjust_offset_x(self.map_offset_x - (mouse_x - self.map_offset_x) * 0.1, map)
                         self.map_offset_y = self.adjust_offset_y(self.map_offset_y - (mouse_y - self.map_offset_y) * 0.1, map)
-                elif event.button == 5:
-                    old_cell_size = self.cell_size
-                    self.cell_size = max(self.cell_size - 1, self.min_cell_size)
-                    if old_cell_size != self.cell_size:
-                        mouse_x, mouse_y = pygame.mouse.get_pos()
-                        self.map_offset_x = self.adjust_offset_x(self.map_offset_x + (mouse_x - self.map_offset_x) * 0.1, map)
-                        self.map_offset_y = self.adjust_offset_y(self.map_offset_y + (mouse_y - self.map_offset_y) * 0.1, map)
+                        redraw_needed = True
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     self.dragging = False
             elif event.type == pygame.MOUSEMOTION:
                 if self.dragging:
-                    new_pos = event.pos
-                    dx = new_pos[0] - self.last_mouse_pos[0]
-                    dy = new_pos[1] - self.last_mouse_pos[1]
-                    self.map_offset_x = self.adjust_offset_x(self.map_offset_x + dx, map)
-                    self.map_offset_y = self.adjust_offset_y(self.map_offset_y + dy, map)
-                    self.last_mouse_pos = new_pos
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    self.map_offset_x = self.adjust_offset_x(self.map_offset_x - (mouse_x - self.map_offset_x) * 0.1, map)
+                    self.map_offset_y = self.adjust_offset_y(self.map_offset_y - (mouse_y - self.map_offset_y) * 0.1, map)
+                    redraw_needed = True
+        self.needs_redraw = redraw_needed
         return True
 
     def adjust_offset_x(self, offset_x, map):
@@ -137,44 +150,48 @@ class Display:
     def draw_terrain_map(self, noise_map):
         if noise_map is None:
             return
-        DEEP_WATER = (0, 0, 139)
-        SHALLOW_WATER = (0, 191, 255)
-        SAND = (238, 214, 175)
-        PLAINS = (50, 238, 50)
-        HIGHLAND = (34, 139, 34)
-        MOUNTAIN = (128, 128, 128)
-        DEFAULT = (255, 255, 255)
-        height, width = noise_map.shape
-        start_x = max(0, int(-self.map_offset_x / self.cell_size))
-        start_y = max(0, int(-self.map_offset_y / self.cell_size))
-        end_x = min(width, int((-self.map_offset_x + self.width) / self.cell_size + 1))
-        end_y = min(height, int((-self.map_offset_y + self.height) / self.cell_size + 1))
-        self.screen.fill(DEFAULT)
-        for i in range(start_y, end_y):
-            for j in range(start_x, end_x):
-                value = noise_map[i][j]
-                if -1.1 <= value < -0.5:
-                    color = DEEP_WATER
-                elif -0.5 <= value < 0:
-                    color = SHALLOW_WATER
-                elif 0 <= value < 0.1:
-                    color = SAND
-                elif 0.1 <= value < 0.5:
-                    color = PLAINS
-                elif 0.5 <= value < 0.7:
-                    color = HIGHLAND
-                elif 0.7 <= value <= 1.1:
-                    color = MOUNTAIN
-                else:
-                    color = DEFAULT
-                pygame.draw.rect(
-                    self.screen,
-                    color,
-                    (self.map_offset_x + j * self.cell_size,
-                     self.map_offset_y + i * self.cell_size,
-                     self.cell_size,
-                     self.cell_size)
+        if (self.last_cell_size != self.cell_size or
+            self.needs_redraw or True):
+            color_indices = np.digitize(
+                noise_map,
+                [-1.1, -0.5, 0, 0.1, 0.5, 0.7, 1.1]
                 )
+            colors = [
+                self.color_map['DEFAULT'],
+                self.color_map['DEEP_WATER'],
+                self.color_map['SHALLOW_WATER'],
+                self.color_map['SAND'],
+                self.color_map['PLAINS'],
+                self.color_map['HIGHLAND'],
+                self.color_map['MOUNTAIN']
+            ]
+            height, width = noise_map.shape
+            start_x = max(0, int(-self.map_offset_x / self.cell_size))
+            start_y = max(0, int(-self.map_offset_y / self.cell_size))
+            end_x = min(width, int((-self.map_offset_x + self.width) / self.cell_size + 1))
+            end_y = min(height, int((-self.map_offset_y + self.height) / self.cell_size + 1))
+            for i in range(start_y, end_y):
+                for j in range(start_x, end_x):
+                    color = colors[color_indices[i][j]]
+                    pygame.draw.rect(
+                        self.screen,
+                        color,
+                        (self.map_offset_x + j * self.cell_size,
+                        self.map_offset_y + i * self.cell_size,
+                        self.cell_size,
+                        self.cell_size)
+                    )
+            self.last_cell_size = self.cell_size
+            self.needs_redraw = False
+        # visible_rect = pygame.Rect(
+        #     -self.map_offset_x,
+        #     -self.map_offset_y,
+        #     self.width,
+        #     self.height
+        # )
+        # self.buffer.fill(self.color_map['DEFAULT'])
+        # self.buffer.blit(self.cached_surface, (self.map_offset_x, self.map_offset_y), visible_rect)
+        # self.screen.blit(self.buffer, (0, 0))
 
     def update(self):
         pygame.display.flip()

@@ -130,10 +130,12 @@ class Display:
                     self.dragging = False
             elif event.type == pygame.MOUSEMOTION:
                 if self.dragging:
-                    mouse_x, mouse_y = pygame.mouse.get_pos()
-                    self.map_offset_x = self.adjust_offset_x(self.map_offset_x - (mouse_x - self.map_offset_x) * 0.1, map)
-                    self.map_offset_y = self.adjust_offset_y(self.map_offset_y - (mouse_y - self.map_offset_y) * 0.1, map)
-                    redraw_needed = True
+                    new_pos = event.pos
+                    dx = new_pos[0] - self.last_mouse_pos[0]
+                    dy = new_pos[1] - self.last_mouse_pos[1]
+                    self.map_offset_x = self.adjust_offset_x(self.map_offset_x + dx, map)
+                    self.map_offset_y = self.adjust_offset_y(self.map_offset_y + dy, map)
+                    self.last_mouse_pos = new_pos
         self.needs_redraw = redraw_needed
         return True
 

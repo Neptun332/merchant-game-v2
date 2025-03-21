@@ -2,9 +2,6 @@ import pygame
 import numpy as np
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName
-import pygame.gfxdraw
-USE_GFXDRAW = True
-
 class Display:
     def __init__(self, width=1024, height=1024, title="Pygame Chart"):
         pygame.init()
@@ -29,8 +26,10 @@ class Display:
         self.dragging = False
         self.last_mouse_pos = None
 
+        self.cached_surface = None
         self.last_cell_size = None
         self.needs_redraw = True
+        self.buffer = pygame.Surface((width, height))
         self.color_map = {
             'DEEP_WATER': (0, 0, 139),
             'SHALLOW_WATER': (0, 191, 255),
@@ -40,7 +39,6 @@ class Display:
             'MOUNTAIN': (128, 128, 128),
             'DEFAULT': (255, 255, 255)
         }
-
 
     def draw_chart(self, price_history, grid_x=0, grid_y=0, num_cycles=1000, title=None):
         chart_width = (self.width - (self.chart_padding * (self.grid_cols + 1))) // self.grid_cols
@@ -121,9 +119,6 @@ class Display:
                     elif event.button == 5:
                         self.cell_size = max(self.cell_size - 1, self.min_cell_size)
                     if old_cell_size != self.cell_size:
-                        mouse_x, mouse_y = pygame.mouse.get_pos()
-                        self.map_offset_x = self.adjust_offset_x(self.map_offset_x - (mouse_x - self.map_offset_x) * 0.1, map)
-                        self.map_offset_y = self.adjust_offset_y(self.map_offset_y - (mouse_y - self.map_offset_y) * 0.1, map)
                         redraw_needed = True
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
@@ -141,23 +136,27 @@ class Display:
 
     def adjust_offset_x(self, offset_x, map):
         map_pixel_width = map.terrain_map.shape[1] * self.cell_size
-        min_offset = min(0, self.width - map_pixel_width)
+        min_offset = min(0, (self.width - map_pixel_width)/2)
         return max(min(0, offset_x), min_offset)
 
     def adjust_offset_y(self, offset_y, map):
         map_pixel_height = map.terrain_map.shape[0] * self.cell_size
-        min_offset = min(0, self.height - map_pixel_height)
+        min_offset = min(0, (self.height - map_pixel_height)/2)
         return max(min(0, offset_y), min_offset)
 
     def draw_terrain_map(self, noise_map):
         if noise_map is None:
             return
-        if (self.last_cell_size != self.cell_size or
-            self.needs_redraw or True):
+        if (self.cached_surface is None or
+            self.last_cell_size != self.cell_size or
+            self.needs_redraw):
+            map_width = noise_map.shape[1] * self.cell_size
+            map_height = noise_map.shape[0] * self.cell_size
+            self.cached_surface = pygame.Surface((map_width, map_height))
             color_indices = np.digitize(
                 noise_map,
                 [-1.1, -0.5, 0, 0.1, 0.5, 0.7, 1.1]
-                )
+            )
             colors = [
                 self.color_map['DEFAULT'],
                 self.color_map['DEEP_WATER'],
@@ -165,35 +164,53 @@ class Display:
                 self.color_map['SAND'],
                 self.color_map['PLAINS'],
                 self.color_map['HIGHLAND'],
-                self.color_map['MOUNTAIN']
+                self.color_map['MOUNTAIN'],
             ]
-            height, width = noise_map.shape
-            start_x = max(0, int(-self.map_offset_x / self.cell_size))
-            start_y = max(0, int(-self.map_offset_y / self.cell_size))
-            end_x = min(width, int((-self.map_offset_x + self.width) / self.cell_size + 1))
-            end_y = min(height, int((-self.map_offset_y + self.height) / self.cell_size + 1))
-            for i in range(start_y, end_y):
-                for j in range(start_x, end_x):
-                    color = colors[color_indices[i][j]]
-                    pygame.draw.rect(
-                        self.screen,
-                        color,
-                        (self.map_offset_x + j * self.cell_size,
-                        self.map_offset_y + i * self.cell_size,
-                        self.cell_size,
-                        self.cell_size)
+            CHUNK_SIZE = 1024
+            for y_chunk in range(0, noise_map.shape[0], CHUNK_SIZE):
+                for x_chunk in range(0, noise_map.shape[1], CHUNK_SIZE):
+                    chunk_end_y = min(y_chunk + CHUNK_SIZE, noise_map.shape[0])
+                    chunk_end_x = min(x_chunk + CHUNK_SIZE, noise_map.shape[1])
+                    chunk_surface = pygame.Surface((
+                        (chunk_end_x - x_chunk) * self.cell_size,
+                        (chunk_end_y - y_chunk) * self.cell_size
+                    ))
+                    for i in range(y_chunk, chunk_end_y):
+                        for j in range(x_chunk, chunk_end_x):
+                            color = colors[color_indices[i][j]]
+                            if self.cell_size > 1:
+                                pygame.draw.rect(
+                                    chunk_surface,
+                                    color,
+                                    (
+                                        (j - x_chunk) * self.cell_size,
+                                        (i - y_chunk) * self.cell_size,
+                                        self.cell_size,
+                                        self.cell_size
+                                    )
+                                )
+                            else:
+                                chunk_surface.set_at(
+                                    (j - x_chunk, i - y_chunk),
+                                    color
+                                )
+                    self.cached_surface.blit(
+                        chunk_surface,
+                        (x_chunk * self.cell_size, y_chunk * self.cell_size)
                     )
             self.last_cell_size = self.cell_size
             self.needs_redraw = False
-        # visible_rect = pygame.Rect(
-        #     -self.map_offset_x,
-        #     -self.map_offset_y,
-        #     self.width,
-        #     self.height
-        # )
-        # self.buffer.fill(self.color_map['DEFAULT'])
-        # self.buffer.blit(self.cached_surface, (self.map_offset_x, self.map_offset_y), visible_rect)
-        # self.screen.blit(self.buffer, (0, 0))
+        map_width = noise_map.shape[1] * self.cell_size
+        map_height = noise_map.shape[0] * self.cell_size
+        visible_rect = pygame.Rect(
+            -self.map_offset_x,
+            -self.map_offset_y,
+            map_width,
+            map_height
+        )
+        self.buffer.fill(self.color_map['DEFAULT'])
+        self.buffer.blit(self.cached_surface, (self.map_offset_x, self.map_offset_y), visible_rect)
+        self.screen.blit(self.buffer, (0, 0))
 
     def update(self):
         pygame.display.flip()

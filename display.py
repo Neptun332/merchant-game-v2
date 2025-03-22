@@ -32,12 +32,13 @@ class Display:
         self.needs_redraw = True
         self.buffer = pygame.Surface((width, height))
         self.color_map = {
-            'DEEP_WATER': (0, 0, 139),
-            'SHALLOW_WATER': (0, 191, 255),
+            'DEEP_WATER': (0, 102, 204),
+            'SHALLOW_WATER': (0, 128, 255),
             'SAND': (238, 214, 175),
-            'PLAINS': (50, 238, 50),
-            'HIGHLAND': (34, 139, 34),
+            'PLAINS': (0, 153, 0),
+            'HIGHLAND': (0, 102, 0),
             'MOUNTAIN': (128, 128, 128),
+            'MOUNTAIN_PEAK': (255, 255, 255),
             'DEFAULT': (255, 255, 255)
         }
 
@@ -164,7 +165,7 @@ class Display:
             self.cached_surface = pygame.Surface((map_width, map_height))
             color_indices = np.digitize(
                 noise_map,
-                [-1.1, -0.5, 0, 0.1, 0.5, 0.7, 1.1]
+                [-1.1, -0.6, -0.2, -0.1, 0.3, 0.7, 0.9, 1.1]
             )
             colors = [
                 self.color_map['DEFAULT'],
@@ -174,6 +175,7 @@ class Display:
                 self.color_map['PLAINS'],
                 self.color_map['HIGHLAND'],
                 self.color_map['MOUNTAIN'],
+                self.color_map['MOUNTAIN_PEAK'],
             ]
             CHUNK_SIZE = 1024
             for y_chunk in range(0, noise_map.shape[0], CHUNK_SIZE):

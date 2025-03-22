@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName
+
 class Display:
     def __init__(self, width=1024, height=1024, title="Pygame Chart"):
         pygame.init()
@@ -103,26 +104,35 @@ class Display:
         print(self.clock.get_fps())
 
     def handle_input(self, map):
-        redraw_needed = False
+        self.redraw_needed = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return False
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
+                if event.button == 1:  # Left mouse button
                     self.dragging = True
                     self.last_mouse_pos = event.pos
-                elif event.button in (4, 5):
+                elif event.button in  (4, 5):
+                    mouse_x, mouse_y = event.pos
+                    world_x = (mouse_x - self.map_offset_x) / self.cell_size
+                    world_y = (mouse_y - self.map_offset_y) / self.cell_size
                     old_cell_size = self.cell_size
-                    if event.button == 4:
+                    if event.button == 4:  # Mouse wheel up (zoom in)
                         self.cell_size = min(self.cell_size + 1, self.max_cell_size)
-                    elif event.button == 5:
+                    elif event.button == 5:  # Mouse wheel down (zoom out)
                         self.cell_size = max(self.cell_size - 1, self.min_cell_size)
                     if old_cell_size != self.cell_size:
-                        redraw_needed = True
+                        self.redraw_needed = True
+                        new_offset_x = mouse_x - (world_x * self.cell_size)
+                        new_offset_y = mouse_y - (world_y * self.cell_size)
+                        self.map_offset_x = self.adjust_offset_x(new_offset_x, map)
+                        self.map_offset_y = self.adjust_offset_y(new_offset_y, map)
             elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1:
+                if event.button == 1:  # Left mouse button
                     self.dragging = False
+
             elif event.type == pygame.MOUSEMOTION:
                 if self.dragging:
                     new_pos = event.pos
@@ -131,7 +141,6 @@ class Display:
                     self.map_offset_x = self.adjust_offset_x(self.map_offset_x + dx, map)
                     self.map_offset_y = self.adjust_offset_y(self.map_offset_y + dy, map)
                     self.last_mouse_pos = new_pos
-        self.needs_redraw = redraw_needed
         return True
 
     def adjust_offset_x(self, offset_x, map):

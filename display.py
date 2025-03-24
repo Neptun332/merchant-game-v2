@@ -101,7 +101,7 @@ class Display:
                 pygame.draw.line(self.screen, (0, 0, 255), (x1, y1), (x2, y2), 2)
 
     def draw(self, global_market, map):
-        self.draw_terrain_map(map.terrain_map)
+        self.draw_terrain_map(map)
         print(self.clock.get_fps())
 
     def handle_input(self, map):
@@ -145,30 +145,26 @@ class Display:
         return True
 
     def adjust_offset_x(self, offset_x, map):
-        map_pixel_width = map.terrain_map.shape[1] * self.cell_size
+        map_pixel_width = map.terrain_type_map.shape[1] * self.cell_size
         min_offset = min(0, (self.width - map_pixel_width)/2)
         return max(min(0, offset_x), min_offset)
 
     def adjust_offset_y(self, offset_y, map):
-        map_pixel_height = map.terrain_map.shape[0] * self.cell_size
+        map_pixel_height = map.terrain_type_map.shape[0] * self.cell_size
         min_offset = min(0, (self.height - map_pixel_height)/2)
         return max(min(0, offset_y), min_offset)
 
-    def draw_terrain_map(self, noise_map):
-        if noise_map is None:
+    def draw_terrain_map(self, map):
+        terrain = map.terrain_type_map
+        if terrain is None:
             return
         if (self.cached_surface is None or
             self.last_cell_size != self.cell_size or
             self.needs_redraw):
-            map_width = noise_map.shape[1] * self.cell_size
-            map_height = noise_map.shape[0] * self.cell_size
+            map_width = terrain.shape[1] * self.cell_size
+            map_height = terrain.shape[0] * self.cell_size
             self.cached_surface = pygame.Surface((map_width, map_height))
-            color_indices = np.digitize(
-                noise_map,
-                [-1.1, -0.6, -0.2, -0.1, 0.3, 0.7, 0.9, 1.1]
-            )
             colors = [
-                self.color_map['DEFAULT'],
                 self.color_map['DEEP_WATER'],
                 self.color_map['SHALLOW_WATER'],
                 self.color_map['SAND'],
@@ -178,17 +174,17 @@ class Display:
                 self.color_map['MOUNTAIN_PEAK'],
             ]
             CHUNK_SIZE = 1024
-            for y_chunk in range(0, noise_map.shape[0], CHUNK_SIZE):
-                for x_chunk in range(0, noise_map.shape[1], CHUNK_SIZE):
-                    chunk_end_y = min(y_chunk + CHUNK_SIZE, noise_map.shape[0])
-                    chunk_end_x = min(x_chunk + CHUNK_SIZE, noise_map.shape[1])
+            for y_chunk in range(0, terrain.shape[0], CHUNK_SIZE):
+                for x_chunk in range(0, terrain.shape[1], CHUNK_SIZE):
+                    chunk_end_y = min(y_chunk + CHUNK_SIZE, terrain.shape[0])
+                    chunk_end_x = min(x_chunk + CHUNK_SIZE, terrain.shape[1])
                     chunk_surface = pygame.Surface((
                         (chunk_end_x - x_chunk) * self.cell_size,
                         (chunk_end_y - y_chunk) * self.cell_size
                     ))
                     for i in range(y_chunk, chunk_end_y):
                         for j in range(x_chunk, chunk_end_x):
-                            color = colors[color_indices[i][j]]
+                            color = colors[terrain[i][j]]
                             if self.cell_size > 1:
                                 pygame.draw.rect(
                                     chunk_surface,
@@ -211,8 +207,8 @@ class Display:
                     )
             self.last_cell_size = self.cell_size
             self.needs_redraw = False
-        map_width = noise_map.shape[1] * self.cell_size
-        map_height = noise_map.shape[0] * self.cell_size
+        map_width = map.terrain_type_map.shape[1] * self.cell_size
+        map_height = map.terrain_type_map.shape[0] * self.cell_size
         visible_rect = pygame.Rect(
             -self.map_offset_x,
             -self.map_offset_y,

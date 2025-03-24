@@ -1,7 +1,6 @@
 import numpy as np
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName, Resource
-import random
 from local_market import LocalMarket
 from city import City
 
@@ -9,17 +8,41 @@ from city import City
 class GameMap:
     def __init__(self):
         self.cities: dict[str, City] = {}
-        self.terrain_map = generate_fractal_noise_2d((64, 64), (2, 2), 3)
-        # self.terrain_map = generate_fractal_noise_2d((512, 512), (4, 4), 6)
+        np.random.seed(2137)
+        self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
+        #self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
+
+        # 0 - DEEP_WATER
+        # 1 - SHALLOW_WATER
+        # 2 - SAND
+        # 3 - PLAINS
+        # 4 - HIGHLAND
+        # 5 - MOUNTAIN
+        # 6 - MOUNTAIN_PEAK
+        self.sea_level = -0.2
+        self.terrain_type_map = self.get_terrain_type_map()
+        self.water_map = self.get_water_map()
+
+        dA_dx, dA_dy = np.gradient(self.terrain_noise)
+        self.magnitude = np.sqrt(dA_dx**2 + dA_dy**2)
 
     def add_city(self, city: City):
         self.cities[city.name] = city 
 
     def get_city(self, name: str) -> City | None:
         return self.cities.get(name, None)
+    
+    def get_terrain_type_map(self):
+        return np.digitize(
+            self.terrain_noise,
+            [-1.1, -0.6, self.sea_level, -0.1, 0.3, 0.7, 0.9, 1.1]
+        ) - 1
+    
+    def get_water_map(self):
+        return np.where(self.terrain_noise < self.sea_level, 1, 0)
 
     def get_water_acumulation(self):
-        dA_dx, dA_dy = np.gradient(self.terrain_map)
+        dA_dx, dA_dy = np.gradient(self.terrain_noise)
 
         height, width = dA_dx.shape
         accumulation = np.ones_like(dA_dx)
@@ -54,13 +77,13 @@ class GameMap:
 
         magnitude =  np.sqrt(dA_dx**2 + dA_dy**2)
         # forces water to flow from high ground even if there is flat ground
-        magnitude = np.where(self.terrain_map < 0.5, magnitude, 1) 
+        magnitude = np.where(self.terrain_noise > self.sea_level, magnitude, 1) 
         magnitude= np.stack([magnitude, magnitude], axis=-1)
 
         zeros = np.full(index_shifts.shape, np.array([0, 0]))
-        index_shifts = np.where(magnitude > 0.05, index_shifts, zeros)
+        index_shifts = np.where(magnitude < 0.35, index_shifts, zeros)
 
-        for _ in range(20):
+        for _ in range(30):
             rain = np.ones_like(accumulation)
             current_water = accumulation + rain
             rain_movement = np.zeros_like(accumulation)

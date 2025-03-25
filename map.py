@@ -1,14 +1,19 @@
+from matplotlib import pyplot as plt
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from path_finding import astar, find_closest_point
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName, Resource
 from local_market import LocalMarket
 from city import City
+from scipy.stats import qmc
 
 
 class GameMap:
-    def __init__(self):
+    def __init__(self, seed=2137):
+        np.random.seed(seed)
+        self.seed = seed
         self.cities: dict[str, City] = {}
-        np.random.seed(2137)
         self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
         #self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
 
@@ -20,8 +25,12 @@ class GameMap:
         # 5 - MOUNTAIN
         # 6 - MOUNTAIN_PEAK
         self.sea_level = -0.2
+        self.mointain_peak = 0.9
+
+        self.rivers_density = 0.04
         self.terrain_type_map = self.get_terrain_type_map()
         self.water_map = self.get_water_map()
+        self.water_acumulation_map = self.get_water_acumulation()
 
         dA_dx, dA_dy = np.gradient(self.terrain_noise)
         self.magnitude = np.sqrt(dA_dx**2 + dA_dy**2)
@@ -35,11 +44,14 @@ class GameMap:
     def get_terrain_type_map(self):
         return np.digitize(
             self.terrain_noise,
-            [-1.1, -0.6, self.sea_level, -0.1, 0.3, 0.7, 0.9, 1.1]
+            [-1.1, -0.6, self.sea_level, -0.1, 0.3, 0.7, self.mointain_peak, 1.1]
         ) - 1
     
     def get_water_map(self):
         return np.where(self.terrain_noise < self.sea_level, 1, 0)
+    
+    def get_mountain_peak_map(self):
+        return np.where(self.terrain_noise > self.mointain_peak, 1, 0)
 
     def get_water_acumulation(self):
         dA_dx, dA_dy = np.gradient(self.terrain_noise)
@@ -97,3 +109,38 @@ class GameMap:
             accumulation = rain_movement
 
         return accumulation
+    
+    def get_random_locations_in_mointain_peaks(self, radius, n_points):
+        mountain_peak_map = self.get_mountain_peak_map()
+        point_on_the_whole_map = self.uniformly_spcaed_points(mountain_peak_map.shape[0]-1, radius, n_points)
+        valid_position =  mountain_peak_map[tuple(point_on_the_whole_map.T)] == 1
+        return point_on_the_whole_map[valid_position]
+    
+    def get_rivers_map(self):
+        radius = 1 / np.sqrt(np.pi * self.rivers_density)
+        number_of_rivers = int(self.rivers_density * self.terrain_noise.shape[0] * self.terrain_noise.shape[1])  # Round down to ensure feasibility
+        rivers_source_location = self.get_random_locations_in_mointain_peaks(radius, number_of_rivers)
+        print(f"Genereted {rivers_source_location.shape[0]} rivers")
+        for river_source in rivers_source_location:
+            river_delta = tuple(find_closest_point(self.water_map, river_source))
+            river_course = astar(self.water_acumulation_map, tuple(river_source), river_delta, speed_based=False)
+
+            if river_course:
+                y, x = zip(*river_course)
+                plt.plot(x, y, marker='o', color='black', linestyle='-', linewidth=2, markersize=5)
+        plt.imshow(self.terrain_noise, cmap='terrain')
+        plt.colorbar(label="Elevation")
+        plt.scatter([river_course[0][1]], [river_course[0][0]], c='green', marker='o', label='Start')
+        plt.scatter([river_course[-1][1]], [river_course[-1][0]], c='red', marker='o', label='Goal')
+        plt.show()
+    
+    def uniformly_spcaed_points(self, max_size, radius, n_points, min_size=0):
+        scaled_radius = radius/max_size
+
+        engine = qmc.PoissonDisk(d=2, radius=scaled_radius, seed=self.seed)
+        generated_points = engine.random(n_points)
+        scaler = MinMaxScaler(feature_range=(min_size, max_size))
+        scaled_points = scaler.fit_transform(generated_points).astype(np.int64)
+        if scaled_points.shape[0] < n_points:
+            print(f"[Warning] Could only generate {scaled_points.shape[0]} points")
+        return scaled_points

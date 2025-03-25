@@ -46,7 +46,7 @@ def astar(grid, start, goal, speed_based=True):
     
     return None  # No path found
 
-def find_closest_point(arr, point, region2):
+def find_closest_point(arr, point, region2=1):
     points_r2 = np.column_stack(np.where(arr == region2))
     
     if len(points_r2) == 0:

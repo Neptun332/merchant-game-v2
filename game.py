@@ -1,3 +1,4 @@
+import numpy as np
 from city import City
 from events import EventManager
 from local_market import LocalMarket
@@ -9,11 +10,14 @@ from global_market import GlobalMarket
 from display import Display
 
 
+
 class Game:
     def __init__(self):
+        self.seed = 2137
+        np.random.seed(self.seed)
+        self.game_map = GameMap(self.seed)
         self.display = Display(title="Resource Prices")
         self.event_manager = EventManager()
-        self.game_map = GameMap()
         self.npcs = []
         self.global_market = GlobalMarket(self.game_map.cities, self.npcs)
 

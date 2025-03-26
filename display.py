@@ -39,6 +39,7 @@ class Display:
             'HIGHLAND': (0, 102, 0),
             'MOUNTAIN': (128, 128, 128),
             'MOUNTAIN_PEAK': (255, 255, 255),
+            'RIVER': (0, 114, 228),
             'DEFAULT': (255, 255, 255)
         }
 
@@ -172,6 +173,7 @@ class Display:
                 self.color_map['HIGHLAND'],
                 self.color_map['MOUNTAIN'],
                 self.color_map['MOUNTAIN_PEAK'],
+                self.color_map['RIVER'],
             ]
             CHUNK_SIZE = 1024
             for y_chunk in range(0, terrain.shape[0], CHUNK_SIZE):

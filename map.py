@@ -24,13 +24,17 @@ class GameMap:
         # 4 - HIGHLAND
         # 5 - MOUNTAIN
         # 6 - MOUNTAIN_PEAK
+
+        # 7 - RIVER
         self.sea_level = -0.2
         self.mointain_peak = 0.9
 
-        self.rivers_density = 0.04
+        self.rivers_density = 0.003
         self.terrain_type_map = self.get_terrain_type_map()
         self.water_map = self.get_water_map()
         self.water_acumulation_map = self.get_water_acumulation()
+        self.river_map = self.get_rivers_map()
+        self.terrain_type_map = np.where(self.river_map == 0, self.terrain_type_map, self.river_map)
 
         dA_dx, dA_dy = np.gradient(self.terrain_noise)
         self.magnitude = np.sqrt(dA_dx**2 + dA_dy**2)
@@ -41,7 +45,7 @@ class GameMap:
     def get_city(self, name: str) -> City | None:
         return self.cities.get(name, None)
     
-    def get_terrain_type_map(self):
+    def get_terrain_type_map(self): 
         return np.digitize(
             self.terrain_noise,
             [-1.1, -0.6, self.sea_level, -0.1, 0.3, 0.7, self.mointain_peak, 1.1]
@@ -121,18 +125,12 @@ class GameMap:
         number_of_rivers = int(self.rivers_density * self.terrain_noise.shape[0] * self.terrain_noise.shape[1])  # Round down to ensure feasibility
         rivers_source_location = self.get_random_locations_in_mointain_peaks(radius, number_of_rivers)
         print(f"Genereted {rivers_source_location.shape[0]} rivers")
+        rivers_map = np.zeros_like(self.terrain_noise)
         for river_source in rivers_source_location:
             river_delta = tuple(find_closest_point(self.water_map, river_source))
             river_course = astar(self.water_acumulation_map, tuple(river_source), river_delta, speed_based=False)
-
-            if river_course:
-                y, x = zip(*river_course)
-                plt.plot(x, y, marker='o', color='black', linestyle='-', linewidth=2, markersize=5)
-        plt.imshow(self.terrain_noise, cmap='terrain')
-        plt.colorbar(label="Elevation")
-        plt.scatter([river_course[0][1]], [river_course[0][0]], c='green', marker='o', label='Start')
-        plt.scatter([river_course[-1][1]], [river_course[-1][0]], c='red', marker='o', label='Goal')
-        plt.show()
+            rivers_map[tuple(np.array(river_course).T)] = 7
+        return rivers_map.astype(np.int8)
     
     def uniformly_spcaed_points(self, max_size, radius, n_points, min_size=0):
         scaled_radius = radius/max_size

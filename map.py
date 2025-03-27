@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from path_finding import astar, find_closest_point
+from path_finding import astar, find_closest_point, find_edges, select_evenly_spaced_points
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName, Resource
 from local_market import LocalMarket
@@ -9,13 +9,14 @@ from city import City
 from scipy.stats import qmc
 
 
+
 class GameMap:
     def __init__(self, seed=2137):
         np.random.seed(seed)
         self.seed = seed
         self.cities: dict[str, City] = {}
-        self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
-        #self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
+        #self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
+        self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
 
         # 0 - DEEP_WATER
         # 1 - SHALLOW_WATER
@@ -29,7 +30,7 @@ class GameMap:
         self.sea_level = -0.2
         self.mointain_peak = 0.9
 
-        self.rivers_density = 0.003
+        self.rivers_density = 0.1
         self.terrain_type_map = self.get_terrain_type_map()
         self.water_map = self.get_water_map()
         self.water_acumulation_map = self.get_water_acumulation()
@@ -121,14 +122,14 @@ class GameMap:
         return point_on_the_whole_map[valid_position]
     
     def get_rivers_map(self):
-        radius = 1 / np.sqrt(np.pi * self.rivers_density)
-        number_of_rivers = int(self.rivers_density * self.terrain_noise.shape[0] * self.terrain_noise.shape[1])  # Round down to ensure feasibility
-        rivers_source_location = self.get_random_locations_in_mointain_peaks(radius, number_of_rivers)
+        number_of_rivers = int(self.rivers_density * self.terrain_noise.shape[0])  # Round down to ensure feasibility
+        mountain_peak_edges = find_edges(self.get_mountain_peak_map())
+        rivers_source_location = select_evenly_spaced_points(mountain_peak_edges, number_of_rivers)
         print(f"Genereted {rivers_source_location.shape[0]} rivers")
         rivers_map = np.zeros_like(self.terrain_noise)
         for river_source in rivers_source_location:
             river_delta = tuple(find_closest_point(self.water_map, river_source))
-            river_course = astar(self.water_acumulation_map, tuple(river_source), river_delta, speed_based=False)
+            river_course = astar(self.water_acumulation_map, tuple(river_source), river_delta, speed_based=True)
             rivers_map[tuple(np.array(river_course).T)] = 7
         return rivers_map.astype(np.int8)
     
@@ -142,3 +143,5 @@ class GameMap:
         if scaled_points.shape[0] < n_points:
             print(f"[Warning] Could only generate {scaled_points.shape[0]} points")
         return scaled_points
+    
+

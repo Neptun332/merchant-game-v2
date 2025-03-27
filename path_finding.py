@@ -1,6 +1,7 @@
 import numpy as np
 import heapq
 from scipy.spatial.distance import cdist
+from scipy.ndimage import binary_dilation
 
 
 def astar(grid, start, goal, speed_based=True):
@@ -36,7 +37,8 @@ def astar(grid, start, goal, speed_based=True):
             return path[::-1]
         
         for neighbor in get_neighbors(current):
-            cost = (1 / grid[neighbor]) if speed_based else grid[neighbor]
+            grid_val = max(grid[neighbor], 0.000001)  # Avoid division by zero
+            cost = (1 / grid_val) if speed_based else grid_val
             tentative_g_score = g_score[current] + cost
             if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                 came_from[neighbor] = current
@@ -57,3 +59,43 @@ def find_closest_point(arr, point, region2=1):
     closest_p2 = points_r2[closest_idx]
     
     return tuple(closest_p2)
+
+def find_edges(array):
+    # Create a binary mask of 1s
+    binary_mask = array.astype(bool)
+
+    # Perform binary dilation (expands 1s)
+    dilated = binary_dilation(binary_mask)
+
+    # Edge pixels are where dilation added new 1s (i.e., difference between dilated and original)
+    edges = dilated & ~binary_mask
+
+    # Get the indices of edge pixels
+    edge_indices = np.argwhere(edges)
+    
+    return edge_indices
+    
+def select_evenly_spaced_points(edge_indices, num_points):
+    """
+    Selects evenly spaced points from the given edge indices.
+    
+    Parameters:
+    - edge_indices: np.array of shape (N, 2), containing (row, col) indices of edge points.
+    - num_points: int, the number of points to select.
+
+    Returns:
+    - np.array of shape (num_points, 2) with selected edge points.
+    """
+    if len(edge_indices) == 0:
+        return np.array([])  # Return empty array if no edges exist
+    
+    if len(edge_indices) <= num_points:
+        return edge_indices  # If we have fewer points than needed, return all
+
+    # Compute step size to get approximately evenly spaced indices
+    step = len(edge_indices) / num_points
+
+    # Select indices at even intervals
+    selected_indices = [edge_indices[int(i * step)] for i in range(num_points)]
+
+    return np.array(selected_indices)

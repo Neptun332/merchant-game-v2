@@ -2,6 +2,8 @@ import numpy as np
 import heapq
 from scipy.spatial.distance import cdist
 from scipy.ndimage import binary_dilation
+from scipy.stats import qmc
+from sklearn.preprocessing import MinMaxScaler
 
 
 def astar(grid, start, goal, speed_based=True):
@@ -99,3 +101,14 @@ def select_evenly_spaced_points(edge_indices, num_points):
     selected_indices = [edge_indices[int(i * step)] for i in range(num_points)]
 
     return np.array(selected_indices)
+
+def uniformly_spaced_points(max_size, radius, n_points, seed, min_size=0):
+    scaled_radius = radius/max_size
+
+    engine = qmc.PoissonDisk(d=2, radius=scaled_radius, seed=seed)
+    generated_points = engine.random(n_points)
+    scaler = MinMaxScaler(feature_range=(min_size, max_size))
+    scaled_points = scaler.fit_transform(generated_points).astype(np.int64)
+    if scaled_points.shape[0] < n_points:
+        print(f"[Warning] Could only generate {scaled_points.shape[0]} points")
+    return scaled_points

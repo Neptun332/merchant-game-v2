@@ -1,12 +1,10 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
 from path_finding import astar, find_closest_point, find_edges, select_evenly_spaced_points
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName, Resource
 from local_market import LocalMarket
 from city import City
-from scipy.stats import qmc
 
 
 
@@ -15,8 +13,8 @@ class GameMap:
         np.random.seed(seed)
         self.seed = seed
         self.cities: dict[str, City] = {}
-        #self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
-        self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
+        self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
+        #self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
 
         # 0 - DEEP_WATER
         # 1 - SHALLOW_WATER
@@ -36,9 +34,6 @@ class GameMap:
         self.water_acumulation_map = self.get_water_acumulation()
         self.river_map = self.get_rivers_map()
         self.terrain_type_map = np.where(self.river_map == 0, self.terrain_type_map, self.river_map)
-
-        dA_dx, dA_dy = np.gradient(self.terrain_noise)
-        self.magnitude = np.sqrt(dA_dx**2 + dA_dy**2)
 
     def add_city(self, city: City):
         self.cities[city.name] = city 
@@ -115,12 +110,6 @@ class GameMap:
 
         return accumulation
     
-    def get_random_locations_in_mointain_peaks(self, radius, n_points):
-        mountain_peak_map = self.get_mountain_peak_map()
-        point_on_the_whole_map = self.uniformly_spcaed_points(mountain_peak_map.shape[0]-1, radius, n_points)
-        valid_position =  mountain_peak_map[tuple(point_on_the_whole_map.T)] == 1
-        return point_on_the_whole_map[valid_position]
-    
     def get_rivers_map(self):
         number_of_rivers = int(self.rivers_density * self.terrain_noise.shape[0])  # Round down to ensure feasibility
         mountain_peak_edges = find_edges(self.get_mountain_peak_map())
@@ -133,15 +122,5 @@ class GameMap:
             rivers_map[tuple(np.array(river_course).T)] = 7
         return rivers_map.astype(np.int8)
     
-    def uniformly_spcaed_points(self, max_size, radius, n_points, min_size=0):
-        scaled_radius = radius/max_size
-
-        engine = qmc.PoissonDisk(d=2, radius=scaled_radius, seed=self.seed)
-        generated_points = engine.random(n_points)
-        scaler = MinMaxScaler(feature_range=(min_size, max_size))
-        scaled_points = scaler.fit_transform(generated_points).astype(np.int64)
-        if scaled_points.shape[0] < n_points:
-            print(f"[Warning] Could only generate {scaled_points.shape[0]} points")
-        return scaled_points
     
 

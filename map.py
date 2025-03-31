@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from path_finding import astar, find_closest_point, find_edges, select_evenly_spaced_points
+from sklearn.preprocessing import MinMaxScaler
+from path_finding import astar, find_closest_point, find_edges, select_evenly_spaced_points, sum_neighbours, uniformly_spaced_points
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName, Resource
 from local_market import LocalMarket
@@ -13,18 +14,21 @@ class GameMap:
         np.random.seed(seed)
         self.seed = seed
         self.cities: dict[str, City] = {}
-        self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
-        #self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
+        #self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
+        self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
 
-        # 0 - DEEP_WATER
-        # 1 - SHALLOW_WATER
-        # 2 - SAND
-        # 3 - PLAINS
-        # 4 - HIGHLAND
-        # 5 - MOUNTAIN
-        # 6 - MOUNTAIN_PEAK
+        # 0 - DEEP_WATER, city probalility = 0.0
+        # 1 - SHALLOW_WATER, city probalility = 0.3
+        # 2 - SAND, city probalility = 0.2
+        # 3 - PLAINS, city probalility = 0.1
+        # 4 - HIGHLAND, city probalility = 0.1
+        # 5 - MOUNTAIN, city probalility = 0.1
+        # 6 - MOUNTAIN_PEAK, city probalility = 0.1
 
-        # 7 - RIVER
+        # 7 - RIVER, city probalility = 0.7
+        self.city_propability_mapping = np.array([0, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1, 0.7])
+        self.city_distance = 20
+
         self.sea_level = -0.2
         self.mointain_peak = 0.9
 
@@ -34,6 +38,7 @@ class GameMap:
         self.water_acumulation_map = self.get_water_acumulation()
         self.river_map = self.get_rivers_map()
         self.terrain_type_map = np.where(self.river_map == 0, self.terrain_type_map, self.river_map)
+        self.city_positions = self.generate_city_positions()
 
     def add_city(self, city: City):
         self.cities[city.name] = city 
@@ -122,5 +127,21 @@ class GameMap:
             rivers_map[tuple(np.array(river_course).T)] = 7
         return rivers_map.astype(np.int8)
     
-    
+    def generate_city_positions(self):
+        # Translate values using indexing
+        translated_arr = self.city_propability_mapping[self.terrain_type_map]
+
+        summed_propability = sum_neighbours(translated_arr, 10)
+        filtered_summed_propability = np.where(np.isin(self.terrain_type_map, [0, 1, 6, 7]), 0, summed_propability)
+
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        city_propability = scaler.fit_transform(filtered_summed_propability)
+
+        drawn_chance = np.random.rand(*city_propability.shape)
+
+        proposed_positions = uniformly_spaced_points(city_propability.shape[0]-1, self.city_distance, np.iinfo(np.int16).max, self.seed)
+
+        selected_city_positions = drawn_chance[tuple(proposed_positions.T)] < city_propability[tuple(proposed_positions.T)]
+
+        return proposed_positions[selected_city_positions]
 

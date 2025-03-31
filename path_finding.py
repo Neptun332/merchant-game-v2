@@ -4,6 +4,7 @@ from scipy.spatial.distance import cdist
 from scipy.ndimage import binary_dilation
 from scipy.stats import qmc
 from sklearn.preprocessing import MinMaxScaler
+from scipy.ndimage import convolve
 
 
 def astar(grid, start, goal, speed_based=True):
@@ -112,3 +113,14 @@ def uniformly_spaced_points(max_size, radius, n_points, seed, min_size=0):
     if scaled_points.shape[0] < n_points:
         print(f"[Warning] Could only generate {scaled_points.shape[0]} points")
     return scaled_points
+
+def sum_neighbours(array, neighbour_range=1):
+    # Define the convolution kernel
+    size = 2 * neighbour_range + 1  # Kernel size based on the neighbour range
+    kernel = np.ones((size, size))
+    kernel[neighbour_range, neighbour_range] = 0  # Exclude the center cell
+
+    # Perform convolution
+    neighbour_sums = convolve(array, kernel, mode='constant', cval=0)
+
+    return array + neighbour_sums

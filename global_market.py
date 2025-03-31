@@ -174,22 +174,4 @@ class GlobalMarket:
         aditional_resource_ammount = defaultdict(int)
         aditional_resource_ammount[resource_name] = 1
         market_share = self.get_market_share(aditional_resource_ammount)
-        return market_share[resource_name] / max(1, self.total_amount[resource_name])
-    
-    def find_edges(array):
-        # Create a binary mask of 1s
-        binary_mask = array.astype(bool)
-
-        # Perform binary dilation (expands 1s)
-        dilated = binary_dilation(binary_mask)
-
-        # Edge pixels are where dilation added new 1s (i.e., difference between dilated and original)
-        edges = dilated & ~binary_mask
-
-        # Get the indices of edge pixels
-        edge_indices = np.argwhere(edges)
-        
-        return edge_indices
-
-
-            
+        return market_share[resource_name] / max(1, self.total_amount[resource_name])            

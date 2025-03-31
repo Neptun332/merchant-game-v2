@@ -43,6 +43,8 @@ class Display:
             'DEFAULT': (255, 255, 255)
         }
 
+        self.castle_sprite = pygame.image.load('resources/castle.png').convert_alpha()
+
     def draw_chart(self, price_history, grid_x=0, grid_y=0, num_cycles=1000, title=None):
         chart_width = (self.width - (self.chart_padding * (self.grid_cols + 1))) // self.grid_cols
         chart_height = (self.height - (self.chart_padding * (self.grid_rows + 1))) // self.grid_rows
@@ -103,6 +105,7 @@ class Display:
 
     def draw(self, global_market, map):
         self.draw_terrain_map(map)
+        self.draw_city_on_terrain_map(map)
         print(self.clock.get_fps())
 
     def handle_input(self, map):
@@ -220,6 +223,23 @@ class Display:
         self.buffer.fill(self.color_map['DEFAULT'])
         self.buffer.blit(self.cached_surface, (self.map_offset_x, self.map_offset_y), visible_rect)
         self.screen.blit(self.buffer, (0, 0))
+
+    def draw_city_on_terrain_map(self, map):
+        # Iterate over all city positions in the map
+        for city_pos in map.city_positions:
+            # Calculate the position on the screen
+            screen_x = (city_pos[1] * self.cell_size) + (2 * self.map_offset_x)
+            screen_y = (city_pos[0] * self.cell_size) + (2 * self.map_offset_y)
+
+            # Scale the castle sprite according to the current zoom level
+            castle_size = 4 * self.cell_size
+            scaled_castle = pygame.transform.scale(
+                self.castle_sprite,
+                (castle_size, castle_size)
+            )
+
+            # Draw the scaled sprite on the screen
+            self.screen.blit(scaled_castle, (screen_x - (castle_size/2), screen_y - (castle_size/2)))
 
     def update(self):
         pygame.display.flip()

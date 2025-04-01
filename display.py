@@ -40,6 +40,7 @@ class Display:
             'MOUNTAIN': (128, 128, 128),
             'MOUNTAIN_PEAK': (255, 255, 255),
             'RIVER': (0, 114, 228),
+            'CONNECTION': (0, 0, 0),
             'DEFAULT': (255, 255, 255)
         }
 
@@ -177,8 +178,9 @@ class Display:
                 self.color_map['MOUNTAIN'],
                 self.color_map['MOUNTAIN_PEAK'],
                 self.color_map['RIVER'],
+                self.color_map['CONNECTION'],
             ]
-            CHUNK_SIZE = 1024
+            CHUNK_SIZE = 128
             for y_chunk in range(0, terrain.shape[0], CHUNK_SIZE):
                 for x_chunk in range(0, terrain.shape[1], CHUNK_SIZE):
                     chunk_end_y = min(y_chunk + CHUNK_SIZE, terrain.shape[0])

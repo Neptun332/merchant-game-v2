@@ -6,6 +6,8 @@ from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName, Resource
 from local_market import LocalMarket
 from city import City
+from scipy.spatial import Delaunay
+
 
 
 
@@ -27,6 +29,7 @@ class GameMap:
 
         # 7 - RIVER, city probalility = 0.7
         self.city_propability_mapping = np.array([0, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1, 0.7])
+        self.terrain_travel_time_mapping = np.array([1, 1, 2, 2, 2, 3, 4, 10])
         self.city_distance = 20
 
         self.sea_level = -0.2
@@ -37,8 +40,11 @@ class GameMap:
         self.water_map = self.get_water_map()
         self.water_acumulation_map = self.get_water_acumulation()
         self.river_map = self.get_rivers_map()
-        self.terrain_type_map = np.where(self.river_map == 0, self.terrain_type_map, self.river_map)
+        self.terrain_type_map = np.where(self.river_map == 7, self.river_map, self.terrain_type_map)
         self.city_positions = self.generate_city_positions()
+        self.terrain_movement_time = self.generate_terrain_movemement_time()
+        self.cities_connections_map = self.generate_cities_connections()
+        self.terrain_type_map = np.where(self.cities_connections_map == 8, self.cities_connections_map, self.terrain_type_map)
 
     def add_city(self, city: City):
         self.cities[city.name] = city 
@@ -144,4 +150,20 @@ class GameMap:
         selected_city_positions = drawn_chance[tuple(proposed_positions.T)] < city_propability[tuple(proposed_positions.T)]
 
         return proposed_positions[selected_city_positions]
+    
+    def generate_terrain_movemement_time(self):
+        return self.terrain_travel_time_mapping[self.terrain_type_map]
+
+    def generate_cities_connections(self):
+        triangulation = Delaunay(self.city_positions)
+        connections_map = np.zeros_like(self.terrain_noise)
+        for triangle in triangulation.simplices:
+            for i in range(3):  # Each triangle has 3 edges
+                for j in range(i + 1, 3):
+                    start_position = self.city_positions[triangle[i]]
+                    end_position = self.city_positions[triangle[j]]
+                    connection_path = astar(self.terrain_movement_time, tuple(start_position), tuple(end_position), speed_based=False)
+                    connections_map[tuple(np.array(connection_path).T)] = 8
+
+        return connections_map.astype(np.int8)
 

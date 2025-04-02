@@ -157,13 +157,19 @@ class GameMap:
     def generate_cities_connections(self):
         triangulation = Delaunay(self.city_positions)
         connections_map = np.zeros_like(self.terrain_noise)
+        connections = []
         for triangle in triangulation.simplices:
             for i in range(3):  # Each triangle has 3 edges
                 for j in range(i + 1, 3):
-                    start_position = self.city_positions[triangle[i]]
-                    end_position = self.city_positions[triangle[j]]
-                    connection_path = astar(self.terrain_movement_time, tuple(start_position), tuple(end_position), speed_based=False)
-                    connections_map[tuple(np.array(connection_path).T)] = 8
+                    vertex_1 = min(triangle[i], triangle[j])
+                    vertex_2 = max(triangle[i], triangle[j])
+                    conn = (vertex_1, vertex_2)
+                    if conn not in connections:
+                        connections.append(conn)
+                        start_position = self.city_positions[triangle[i]]
+                        end_position = self.city_positions[triangle[j]]
+                        connection_path = astar(self.terrain_movement_time, tuple(start_position), tuple(end_position), speed_based=False)
+                        connections_map[tuple(np.array(connection_path).T)] = 8
 
         return connections_map.astype(np.int8)
 

@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.neighbors import kneighbors_graph
 from path_finding import astar, find_closest_point, find_edges, select_evenly_spaced_points, sum_neighbours, uniformly_spaced_points
 from perlin_noise import generate_fractal_noise_2d
 from resources import ResourceName, Resource
@@ -43,7 +44,7 @@ class GameMap:
         self.terrain_type_map = np.where(self.river_map == 7, self.river_map, self.terrain_type_map)
         self.city_positions = self.generate_city_positions()
         self.terrain_movement_time = self.generate_terrain_movemement_time()
-        self.cities_connections_map = self.generate_cities_connections()
+        self.cities_connections_map = self.generate_cities_connections_v2()
         self.terrain_type_map = np.where(self.cities_connections_map == 8, self.cities_connections_map, self.terrain_type_map)
 
     def add_city(self, city: City):
@@ -169,7 +170,43 @@ class GameMap:
                         start_position = self.city_positions[triangle[i]]
                         end_position = self.city_positions[triangle[j]]
                         connection_path = astar(self.terrain_movement_time, tuple(start_position), tuple(end_position), speed_based=False)
+
                         connections_map[tuple(np.array(connection_path).T)] = 8
 
         return connections_map.astype(np.int8)
-
+    
+    def generate_cities_connections_v2(self):
+        n_cities = len(self.city_positions)
+        if n_cities < 2:
+            return np.zeros_like(self.terrain_noise).astype(np.int8)
+        
+        # Build graph using k-nearest neighbors
+        print(f"Building k-nearest neighbors graph for {n_cities} cities...")
+        k = min(3, n_cities - 1)  # Use k-nearest neighbors
+        
+        # Get k-nearest neighbors graph based on spatial distances
+        knn_graph = kneighbors_graph(self.city_positions, n_neighbors=k, mode='distance', include_self=False)
+        
+        # Get edges from k-nearest neighbors and remove duplicates using numpy
+        knn_coo = knn_graph.tocoo()
+        edges_raw = np.column_stack([knn_coo.row, knn_coo.col])
+        
+        # Remove doubled connections (A-B and B-A are the same) using numpy
+        # Sort each pair so (i,j) and (j,i) become the same
+        edges_sorted = np.sort(edges_raw, axis=1)
+        
+        # Get unique edges using numpy (much faster than Python set operations)
+        edges = np.unique(edges_sorted, axis=0)
+        
+        # Draw connections on the map
+        connections_map = np.zeros_like(self.terrain_noise)
+        
+        print(f"Drawing {len(edges)} connections on the map...")
+        for i, j in edges:
+            start_position = self.city_positions[i]
+            end_position = self.city_positions[j]
+            connection_path = astar(self.terrain_movement_time, tuple(start_position), tuple(end_position), speed_based=False)
+            
+            connections_map[tuple(np.array(connection_path).T)] = 8
+        
+        return connections_map.astype(np.int8)

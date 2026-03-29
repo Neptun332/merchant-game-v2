@@ -30,7 +30,7 @@ class GameMap:
 
         # 7 - RIVER, city probalility = 0.7
         self.city_propability_mapping = np.array([0, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1, 0.7])
-        self.terrain_travel_time_mapping = np.array([1, 1, 2, 2, 2, 3, 4, 10])
+        self.terrain_travel_time_mapping = np.array([2, 2, 3, 3, 3, 4, 5, 11])
         self.city_distance = 20
 
         self.sea_level = -0.2
@@ -184,8 +184,25 @@ class GameMap:
         print(f"Building k-nearest neighbors graph for {n_cities} cities...")
         k = min(3, n_cities - 1)  # Use k-nearest neighbors
         
-        # Get k-nearest neighbors graph based on spatial distances
-        knn_graph = kneighbors_graph(self.city_positions, n_neighbors=k, mode='distance', include_self=False)
+        # Calculate terrain-based distance matrix
+        print(f"Computing terrain-based distances between {n_cities} cities...")
+        distance_matrix = np.zeros((n_cities, n_cities))
+        for i in range(n_cities):
+            for j in range(i + 1, n_cities):
+                start_position = self.city_positions[i]
+                end_position = self.city_positions[j]
+                connection_path = astar(self.terrain_movement_time, tuple(start_position), tuple(end_position), speed_based=False)
+                
+                # Calculate total terrain movement time along the path
+                path_array = np.array(connection_path)
+                terrain_costs = self.terrain_movement_time[tuple(path_array.T)]
+                total_cost = np.sum(terrain_costs)
+                
+                distance_matrix[i, j] = total_cost
+                distance_matrix[j, i] = total_cost
+        
+        # Get k-nearest neighbors graph based on terrain-based distances
+        knn_graph = kneighbors_graph(distance_matrix, n_neighbors=k, mode='distance', include_self=False, metric='precomputed')
         
         # Get edges from k-nearest neighbors and remove duplicates using numpy
         knn_coo = knn_graph.tocoo()

@@ -9,46 +9,65 @@ from scipy.ndimage import convolve
 
 def astar(grid, start, goal, speed_based=True):
     rows, cols = grid.shape
-    
+
+    # Use Manhattan distance (faster than Euclidean for grid-based pathfinding)
     def heuristic(a, b):
-        return np.linalg.norm(np.array(a) - np.array(b))
-    
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    # Pre-compute neighbor offsets
+    neighbor_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
     def get_neighbors(pos):
         r, c = pos
         neighbors = []
-        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        for dr, dc in neighbor_offsets:
             nr, nc = r + dr, c + dc
             if 0 <= nr < rows and 0 <= nc < cols:
                 neighbors.append((nr, nc))
         return neighbors
-    
+
     open_set = []
     heapq.heappush(open_set, (0, start))
     came_from = {}
     g_score = {start: 0}
     f_score = {start: heuristic(start, goal)}
-    
+    closed_set = set()  # Track visited nodes
+
     while open_set:
         _, current = heapq.heappop(open_set)
-        
+
+        # Skip if already visited
+        if current in closed_set:
+            continue
+
         if current == goal:
-            path = []
+            path = [current]
             while current in came_from:
-                path.append(current)
                 current = came_from[current]
-            path.append(start)
+                path.append(current)
             return path[::-1]
-        
+
+        closed_set.add(current)
+        current_g = g_score[current]
+
         for neighbor in get_neighbors(current):
-            grid_val = max(grid[neighbor], 0.000001)  # Avoid division by zero
-            cost = (1 / grid_val) if speed_based else grid_val
-            tentative_g_score = g_score[current] + cost
+            if neighbor in closed_set:
+                continue
+
+            # Cache grid value lookup and avoid repeated access
+            grid_val = grid[neighbor]
+            if grid_val < 0.000001:
+                grid_val = 0.000001
+
+            cost = (1.0 / grid_val) if speed_based else grid_val
+            tentative_g_score = current_g + cost
+
             if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                 came_from[neighbor] = current
                 g_score[neighbor] = tentative_g_score
                 f_score[neighbor] = tentative_g_score + heuristic(neighbor, goal)
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
-    
+
     return None  # No path found
 
 def find_closest_point(arr, point, region2=1):

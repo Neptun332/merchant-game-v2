@@ -27,17 +27,17 @@
 - Map, rivers, and city positions are generated using Perlin/fractal noise and Delaunay triangulation.
 - events.py provides a basic event manager for extensibility.
 
-## Adding a New Resource
-1. Add the new resource to the `ResourceName` enum in resources.py.
-2. Update relevant market and production logic in local_market.py, global_market.py, and production_buildings.py.
-3. Add the resource to city setup in game.py.
-4. Update or add tests in `tests/` as needed.
-
-## Adding a New Building
-1. Subclass `ProductionBuilding` in production_buildings.py.
-2. Define the produced resource, required inputs, and production logic.
-3. Add the building to city setup in game.py.
-4. Add or modify tests in `tests/`.
+## NumPy in map.py
+- **map.py heavily relies on NumPy** for efficient 2D array operations on large terrain grids (512x512).
+- NumPy is used for:
+  - **Terrain generation**: Using `np.digitize()` to classify elevation values into terrain types.
+  - **Water flow simulation**: Using `np.gradient()`, `np.arctan2()`, and element-wise operations to calculate flow directions.
+  - **River generation**: Using NumPy masking and indexing to overlay rivers on the terrain map.
+  - **City placement**: Using NumPy random sampling, neighbor summing, and probabilistic filtering via `np.random.rand()` and `np.where()`.
+  - **City connections**: Using `np.sort()`, `np.unique()`, and `np.column_stack()` for efficient k-NN edge deduplication.
+  - **Terrain travel times**: Using NumPy array indexing to map terrain types to movement costs.
+- All map generation must use `np.random.seed(seed)` at initialization to ensure deterministic and reproducible maps.
+- NumPy's C-backed storage and broadcasting enable efficient handling of large grids without explicit loops where possible.
 
 ## Testing
 - Place all unit tests in the `tests/` directory.

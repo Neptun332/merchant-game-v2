@@ -1,5 +1,5 @@
 from resources import ResourceName, Resource
-from map import City
+from city import City
 import random
 
 

@@ -2,6 +2,7 @@ import time
 
 from matplotlib import pyplot as plt
 import numpy as np
+from city_factory import CityFactory
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import kneighbors_graph
 from path_finding import (
@@ -13,17 +14,16 @@ from path_finding import (
     uniformly_spaced_points,
 )
 from perlin_noise import generate_fractal_noise_2d
-from resources import ResourceName, Resource
-from local_market import LocalMarket
 from city import City
 from scipy.spatial import Delaunay
 from scipy.ndimage import label
 
 
 class GameMap:
-    def __init__(self, seed=2137):
+    def __init__(self, city_factory: CityFactory, seed=2137):
         np.random.seed(seed)
         self.seed = seed
+        self.city_factory = city_factory
         self.cities: dict[str, City] = {}
         # self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
         self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
@@ -67,10 +67,7 @@ class GameMap:
         )
 
     def add_city(self, city: City):
-        self.cities[city.name] = city
-
-    def get_city(self, name: str) -> City | None:
-        return self.cities.get(name, None)
+        self.cities[city.position] = city
 
     def get_terrain_type_map(self):
         return (
@@ -199,7 +196,13 @@ class GameMap:
             < city_propability[tuple(proposed_positions.T)]
         )
 
-        return proposed_positions[selected_city_positions]
+        generated_positions = proposed_positions[selected_city_positions]
+
+        for position in generated_positions:
+            city = self.city_factory.create_city(position=tuple(position.astype(int)))
+            self.add_city(city)
+
+        return generated_positions
 
     def generate_terrain_movemement_time(self):
         return self.terrain_travel_time_mapping[self.terrain_type_map]

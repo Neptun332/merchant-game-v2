@@ -1,73 +1,26 @@
 import numpy as np
-from city import City
 from events import EventManager
-from local_market import LocalMarket
 from map import GameMap
 from npc import NPC
-from production_buildings import Farm, IronMine, ToolsSmithy
 from resources import ResourceName, Resource
 from global_market import GlobalMarket
 from display import Display
+from city_factory import CityFactory
 
 
 class Game:
     def __init__(self):
         self.seed = 2137
         np.random.seed(self.seed)
-        self.game_map = GameMap(self.seed)
+        self.npcs = []
+        self.global_market = GlobalMarket({}, self.npcs)
+        self.city_factory = CityFactory(self.global_market)
+        self.game_map = GameMap(self.city_factory, self.seed)
+        self.global_market.cities = self.game_map.cities
         self.display = Display(title="Resource Prices")
         self.event_manager = EventManager()
-        self.npcs = []
-        self.global_market = GlobalMarket(self.game_map.cities, self.npcs)
 
     def setup(self):
-        # Setup cities
-        city1 = City(
-            name="CityA",
-            production_buildings=[IronMine(), Farm(), ToolsSmithy()],
-            local_market=LocalMarket(
-                global_market=self.global_market,
-                resources={
-                    ResourceName.Iron: Resource(ResourceName.Iron, 100),
-                    ResourceName.Wood: Resource(ResourceName.Wood, 100),
-                    ResourceName.Wheat: Resource(ResourceName.Wheat, 100),
-                    ResourceName.Stone: Resource(ResourceName.Stone, 100),
-                    ResourceName.Tools: Resource(ResourceName.Tools, 100),
-                },
-            ),
-        )
-        city2 = City(
-            name="CityB",
-            production_buildings=[IronMine(), Farm(), ToolsSmithy()],
-            local_market=LocalMarket(
-                global_market=self.global_market,
-                resources={
-                    ResourceName.Iron: Resource(ResourceName.Iron, 50),
-                    ResourceName.Wood: Resource(ResourceName.Wood, 50),
-                    ResourceName.Wheat: Resource(ResourceName.Wheat, 50),
-                    ResourceName.Stone: Resource(ResourceName.Stone, 50),
-                    ResourceName.Tools: Resource(ResourceName.Tools, 50),
-                },
-            ),
-        )
-        city3 = City(
-            name="CityC",
-            production_buildings=[IronMine(), Farm(), ToolsSmithy()],
-            local_market=LocalMarket(
-                global_market=self.global_market,
-                resources={
-                    ResourceName.Iron: Resource(ResourceName.Iron, 150),
-                    ResourceName.Wood: Resource(ResourceName.Wood, 150),
-                    ResourceName.Wheat: Resource(ResourceName.Wheat, 150),
-                    ResourceName.Stone: Resource(ResourceName.Stone, 150),
-                    ResourceName.Tools: Resource(ResourceName.Tools, 150),
-                },
-            ),
-        )
-        self.game_map.add_city(city1)
-        self.game_map.add_city(city2)
-        self.game_map.add_city(city3)
-
         # Setup NPCs
         npc1 = NPC(
             name="Trader Joe",
@@ -92,11 +45,11 @@ class Game:
                 city.consume_resources()
                 city.produce_resources()
 
-            # Game loop logic
-            for npc in self.npcs:
-                city = self.game_map.get_city("CityA")
-                if city:
-                    npc.trade(city)
+            # # Game loop logic
+            # for npc in self.npcs:
+            #     city = next(iter(self.game_map.cities.values()), None)
+            #     if city:
+            #         npc.trade(city)
 
             if not self.display.handle_input(self.game_map):
                 break

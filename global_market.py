@@ -1,6 +1,6 @@
 import random
 from local_market import LocalMarket
-from map import City
+from city import City
 from npc import NPC
 from resources import ResourceName
 from collections import defaultdict

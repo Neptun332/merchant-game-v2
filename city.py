@@ -7,16 +7,16 @@ from resources import ResourceName
 class City:
     def __init__(
         self,
+        position: tuple[int, int],
         name: str,
         local_market: LocalMarket,
         production_buildings: list[ProductionBuilding],
-        
     ):
+        self.position = position
         self.name = name
         self.development_level = (
             1.0  # Base development level, can be increased over time
         )
-
         self.local_market = local_market
         self.production_buildings = production_buildings
 

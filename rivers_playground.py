@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 from map import GameMap
 import numpy as np
-    
+
 np.random.seed(2137)
 game_map = GameMap()
 flow_accumulation = game_map.get_water_acumulation()
@@ -20,7 +20,7 @@ plt.subplot(132)
 plt.title("Gradient (downsampled)")
 
 plt.subplot(133)
-plt.imshow(flow_accumulation, cmap='Blues')
+plt.imshow(flow_accumulation, cmap="Blues")
 plt.colorbar(label="Log Flow Accumulation")
 plt.title("Flow Accumulation")
 

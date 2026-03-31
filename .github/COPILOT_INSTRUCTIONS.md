@@ -49,7 +49,7 @@
 - Do not introduce non-deterministic behavior in map or city placement.
 
 ## Code Style
-- Use clear docstrings and type hints where appropriate.
+- Don't use docstrings.
 - Follow PEP8 for Python code style.
 
 ## Logic and Visualization Separation

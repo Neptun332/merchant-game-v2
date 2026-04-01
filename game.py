@@ -6,6 +6,7 @@ from resources import ResourceName, Resource
 from global_market import GlobalMarket
 from display import Display
 from city_factory import CityFactory
+from city_connector import CityConnector
 
 
 class Game:
@@ -15,7 +16,8 @@ class Game:
         self.npcs = []
         self.global_market = GlobalMarket({}, self.npcs)
         self.city_factory = CityFactory(self.global_market)
-        self.game_map = GameMap(self.city_factory, self.seed)
+        self.city_connector = CityConnector()
+        self.game_map = GameMap(self.city_factory, self.city_connector, self.seed)
         self.global_market.cities = self.game_map.cities
         self.display = Display(title="Resource Prices")
         self.event_manager = EventManager()

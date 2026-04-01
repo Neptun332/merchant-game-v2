@@ -17,14 +17,19 @@ from perlin_noise import generate_fractal_noise_2d
 from city import City
 from scipy.spatial import Delaunay
 from scipy.ndimage import label
+from city_connector import CityConnector
 
 
 class GameMap:
-    def __init__(self, city_factory: CityFactory, seed=2137):
+    def __init__(
+        self, city_factory: CityFactory, city_connector: CityConnector, seed=2137
+    ):
         np.random.seed(seed)
         self.seed = seed
+        self.city_connector = city_connector
         self.city_factory = city_factory
         self.cities: dict[str, City] = {}
+
         # self.terrain_noise = generate_fractal_noise_2d((64, 64), (2, 2), 3)
         self.terrain_noise = generate_fractal_noise_2d((512, 512), (4, 4), 5)
 
@@ -38,8 +43,11 @@ class GameMap:
 
         # 7 - RIVER, city probalility = 0.7
         self.city_propability_mapping = np.array([0, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1, 0.7])
-        self.terrain_travel_time_mapping = np.array(
-            [0, 0, 1, 1, 1, 0.8, 0.5, 0.2]
+        self.land_travel_speed_mapping = np.array(
+            [-1, -1, 1, 1, 1, 0.8, 0.5, 0.2]
+        )  # max value 2
+        self.water_travel_speed_mapping = np.array(
+            [2, 2, -1, -1, -1, -1, -1, -1]
         )  # max value 2
         self.city_distance = 20
 
@@ -55,14 +63,28 @@ class GameMap:
             self.river_map == 7, self.river_map, self.terrain_type_map
         )
         self.city_positions = self.generate_city_positions()
-        self.terrain_movement_time = self.generate_terrain_movemement_time()
-        start_time = time.perf_counter()
-        self.cities_connections_map = self.generate_cities_connections_v2()
-        end_time = time.perf_counter()
-        print(f"################### {end_time - start_time}")
+        self.cities_connections_land_regions_map = (
+            self.city_connector.generate_cities_connections_land_regions(
+                self.city_positions,
+                self.terrain_type_map,
+                self.land_travel_speed_mapping,
+            )
+        )
+        self.cities_connections_water_regions_map = (
+            self.city_connector.generate_cities_connections_water_regions(
+                self.city_positions,
+                self.terrain_type_map,
+                self.water_travel_speed_mapping,
+            )
+        )
         self.terrain_type_map = np.where(
-            self.cities_connections_map == 8,
-            self.cities_connections_map,
+            self.cities_connections_land_regions_map == 8,
+            self.cities_connections_land_regions_map,
+            self.terrain_type_map,
+        )
+        self.terrain_type_map = np.where(
+            self.cities_connections_water_regions_map == 8,
+            self.cities_connections_water_regions_map,
             self.terrain_type_map,
         )
 
@@ -204,9 +226,6 @@ class GameMap:
 
         return generated_positions
 
-    def generate_terrain_movemement_time(self):
-        return self.terrain_travel_time_mapping[self.terrain_type_map]
-
     def generate_cities_connections(self):
         triangulation = Delaunay(self.city_positions)
         connections_map = np.zeros_like(self.terrain_noise)
@@ -231,110 +250,3 @@ class GameMap:
                         connections_map[tuple(np.array(connection_path).T)] = 8
 
         return connections_map.astype(np.int8)
-
-    def generate_cities_connections_v2(self):
-        n_cities = len(self.city_positions)
-        if n_cities < 2:
-            return np.zeros_like(self.terrain_noise).astype(np.int8)
-
-        land_regions = self.detect_terrain_regions([2, 3, 4, 5, 6, 7])
-
-        # Map each city to its region
-        city_to_region = {}
-        for city_idx in range(n_cities):
-            city_pos = tuple(self.city_positions[city_idx].astype(int))
-            # Check bounds
-            if (
-                city_pos[0] < self.terrain_type_map.shape[0]
-                and city_pos[1] < self.terrain_type_map.shape[1]
-            ):
-                for region_id, region_mask in land_regions.items():
-                    if region_mask[city_pos]:
-                        city_to_region[city_idx] = region_id
-                        break
-
-        # Group cities by region
-        region_to_cities = {}
-        for city_idx, region_id in city_to_region.items():
-            if region_id not in region_to_cities:
-                region_to_cities[region_id] = []
-            region_to_cities[region_id].append(city_idx)
-
-        print(f"Found {len(region_to_cities)} regions with cities")
-        print(
-            f"Cities per region: {[len(cities) for cities in region_to_cities.values()]}"
-        )
-
-        # Build edges separately for each region
-        all_edges = []
-
-        for region_id, city_indices in region_to_cities.items():
-            if len(city_indices) < 2:
-                continue
-
-            # Get positions of cities in this region
-            region_city_positions = self.city_positions[city_indices]
-
-            # Build k-nearest neighbors graph for this region
-            k = min(3, len(city_indices) - 1)
-            knn_graph = kneighbors_graph(
-                region_city_positions,
-                n_neighbors=k,
-                mode="distance",
-                include_self=False,
-            )
-
-            # Get edges from knn graph
-            knn_coo = knn_graph.tocoo()
-            edges_raw = np.column_stack([knn_coo.row, knn_coo.col])
-
-            # Map local indices back to global city indices
-            edges_global = np.array(
-                [[city_indices[i], city_indices[j]] for i, j in edges_raw]
-            )
-
-            # Remove duplicates (A-B and B-A are the same)
-            edges_sorted = np.sort(edges_global, axis=1)
-            edges_unique = np.unique(edges_sorted, axis=0)
-
-            all_edges.extend(edges_unique)
-
-        # Convert to numpy array and remove any remaining duplicates
-        if all_edges:
-            all_edges = np.array(all_edges)
-            edges = np.unique(all_edges, axis=0)
-        else:
-            edges = np.array([])
-
-        # Draw connections on the map
-        connections_map = np.zeros_like(self.terrain_noise)
-
-        print(f"Drawing {len(edges)} connections on the map...")
-        for i, j in edges:
-            start_position = self.city_positions[i]
-            end_position = self.city_positions[j]
-            connection_path = astar(
-                self.terrain_movement_time,
-                tuple(start_position),
-                tuple(end_position),
-                speed_based=True,
-            )
-
-            connections_map[tuple(np.array(connection_path).T)] = 8
-
-        return connections_map.astype(np.int8)
-
-    def detect_terrain_regions(self, terrain_types: list[int]) -> dict[int, np.ndarray]:
-        # Create binary mask for specified terrain types
-        binary_mask = np.isin(self.terrain_type_map, terrain_types)
-
-        # Find connected components using 8-connectivity (neighbors including diagonals)
-        connectivity = np.ones((3, 3), dtype=int)  # 8-connectivity
-        labeled_array, num_features = label(binary_mask, structure=connectivity)
-
-        # Create dictionary mapping region_id to binary mask for that region
-        regions = {}
-        for region_id in range(1, num_features + 1):
-            regions[region_id] = labeled_array == region_id
-
-        return regions
